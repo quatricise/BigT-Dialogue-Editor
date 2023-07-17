@@ -1,0 +1,60 @@
+#modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+}
+.editor-modal {
+  position: fixed;
+  padding: 20px;
+  border: 2px solid var(--dark-4);
+  border-radius: 5px;
+  color: white;
+  background-color: var(--dark-3);
+}
+.modal-message {
+  text-align: center;
+  width: 100%;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.modal-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border: 2px solid var(--dark-5);
+  border-radius: 5px;
+}
+.modal-button.deletion {
+  border: 2px solid rgb(240, 61, 48);
+}
+.modal-button.deletion:hover {
+  background-color: rgb(240, 61, 48);
+}
+.modal-button.creation {
+  border: 2px solid green;
+}
+.modal-button.creation:hover {
+  background-color: green;
+}
+.modal-button.alteration {
+  border: 2px solid yellow;
+}
+.modal-button.alteration:hover {
+  background-color: yellow;
+}
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+}

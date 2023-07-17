@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dialogue Editor</title>
+  <!-- styles -->
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/colors.css">
+  <link rel="stylesheet" href="css/cursor.css">
+  <link rel="stylesheet" href="css/general.css">
+  <link rel="stylesheet" href="css/unsorted.css">
+  <link rel="stylesheet" href="css/fact.css">
+  <link rel="stylesheet" href="css/icons.css">
+  <link rel="stylesheet" href="css/dialogueEditor.css">
+  <link rel="stylesheet" href="css/dialogueScreen.css">
+  <link rel="stylesheet" href="css/searchPopup.css">
+  <link rel="stylesheet" href="css/gameOverlays.css">
+  <link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+  <div id="modal-container" class="hidden"></div>
+  <div id="dialogue-editor" class="dialogue-editor hidden">
+    <div id="dialogue-editor-box-selection" class="hidden"></div>
+    <div id="dialogue-editor-navbar" class="dialogue-editor-navbar">
+      <div class="editor-label">
+        <img class="editor-label-icon" src="assets/icons/iconDialogueEditor.png" alt="">
+        <span>Dialogue editor</span>
+      </div>
+      <!-- <div class="dialogue-name" title="Click to rename">Dialogue name</div> -->
+      <div id="navbar-files" class="navbar-files tiny-scrollbar"></div>
+      <div class="filler"></div>
+      <div style="display: flex; align-items: center;">
+        <img id="toggle-sidebars-icon" src="assets/icons/iconToggleSidebars.png" title="Toggle sidebars [U]">
+      </div>
+      <div id="save-mode-toggle" class="toggle-button">
+        <div class="toggle-option active" data-option="manual"    title="Each file is saved manually.">Manual</div> 
+        <div class="toggle-option"        data-option="automatic" title="Each file is saved automatically while editing. Risky.">Auto</div> 
+      </div>
+      <div style="display: flex; align-items: center;">
+        <img class="save-icon" src="assets/icons/iconSave.png" title="Saving mode">
+      </div>
+    </div>
+    <div id="sidebar-left" class="sidebar left">
+      <div id="sidebar-left-search-wrapper">
+        <div id="sidebar-left-search-icon" class="ui-graphic"></div>
+        <input id="sidebar-left-search-input" type="text" name="" placeholder="Search for files">
+        <img id="sidebar-left-hide-arrow" class="small-arrow" src="assets/icons/iconSmallArrow.png">
+      </div>
+      <div class="sidebar-heading">
+        <img class="sidebar-folder-icon" src="assets/icons/iconFolder.png" title="Open folder">
+        <div id="sidebar-left-folder-heading" class="faded-text">Folder</div>
+        <div class="filler"></div>
+      </div>
+      <div id="sidebar-left-files"></div>
+      <div class="filler"></div>
+      <div id="add-file-button">
+        <img id="add-file-icon" src="assets/icons/iconPlus.png" alt="">
+        <div class="add-file-text">New file</div>
+      </div>
+      <div class="sidebar-heading">
+        <div id="sidebar-left-actions">Options</div>
+      </div>
+      <div class="dialogue-editor-options">
+        <div class="dialogue-editor-option" title="Deleting nodes requires confirmation."                                 data-option="safeMode">           Safe mode</div>
+        <div class="dialogue-editor-option" title="Hide unnecessary buttons for each node and push them closer together." data-option="compactView">        Compact view</div>
+      </div>
+    </div>
+    <div id="sidebar-right" class="sidebar right">
+       <div id="character-list-heading" class="sidebar-heading">
+         <img id="sidebar-right-hide-arrow" class="small-arrow" src="assets/icons/iconSmallArrow.png">
+        <div id="sidebar-right-characters-heading">Characters</div>
+      </div>
+      <div id="sidebar-right-character-list"></div>
+    </div>
+  </div>
+
+  <!-- dependencies -->
+  <script src="js/dependencies/intersects.min.js"></script> <!-- 6.3.0 -->
+  <script src="js/dependencies/lodash.js"></script>         <!-- 4.17.15 -->
+
+  <!-- utility -->
+  <script src="js/utility/constants.js"></script>
+  <script src="js/utility/range.js"></script>
+  <script src="js/utility/mathUtils.js"></script>
+  <script src="js/utility/random.js"></script>
+  <script src="js/utility/extensions.js"></script>
+  <script src="js/utility/htmlMethods.js"></script>
+  <script src="js/utility/rotation.js"></script>
+  <script src="js/utility/vector.js"></script>
+  <script src="js/utility/line.js"></script>
+  <script src="js/utility/ease.js"></script>
+  <script src="js/utility/debug.js"></script>
+  <script src="js/utility/colors.js"></script>
+  <script src="js/utility/visible.js"></script>
+  <script src="js/utility/file.js"></script>
+  <script src="js/utility/utility.js"></script>
+  <script src="js/utility/state.js"></script>
+  <script src="js/utility/switch.js"></script>
+  <script src="js/utility/timer.js"></script>
+  <script src="js/utility/tooltip.js"></script>
+  <script src="js/utility/popupTooltip.js"></script>
+  <script src="js/utility/hitbox.js"></script>
+
+
+  <script src="js/collision.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/gameWindow.js"></script>
+  <script src="js/binds.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/mouse.js"></script>
+  <script src="js/modal.js"></script>
+
+  <!-- dialogue -->
+  <script src="js/dialogue/historyMachine.js"></script>
+  <script src="js/dialogue/historyState.js"></script>
+  <script src="js/dialogue/dialogueScreen.js"></script>
+  <script src="js/dialogue/dialogueEditorSection.js"></script>
+  <script src="js/dialogue/dialogueData.js"></script>
+  <script src="js/dialogue/dialogueNode.js"></script>
+  <script src="js/dialogue/dialogueEditor.js"></script>
+  <script src="js/dialogue/propertiesPanel.js"></script>
+  <script src="js/dialogue/fact.js"></script>
+  <script src="js/dialogue/criterion.js"></script>
+  <script src="js/dialogue/requirement.js"></script>
+
+  <script src="js/server.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
