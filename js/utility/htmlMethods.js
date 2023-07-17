@@ -26,9 +26,34 @@ function El(
   return element
 }
 
-El.special = (name) => {
-  if(name === "node-socket-out") return El('div', "dialogue-node-socket out", [["title", "Drag to connect to other nodes"]])
-  if(name === "node-socket-in")  return El('div', "dialogue-node-socket in")
+El.special = (name, args = {}) => {
+  if(name === "node-socket-out") {
+    return El('div', "dialogue-node-socket out", [["title", "Drag to connect to other nodes"]])
+  } 
+  if(name === "node-socket-in") {
+    return El('div', "dialogue-node-socket in")
+  } 
+  if(name === "bubble-toggle") {
+    let bubbleCount = args.options ? args.options.length - 1 : 1
+    function createRow(text) {
+      let row =     El("div", "bubble-toggle-row")
+      let bubble =  El("div", "toggle-bubble")
+      let textElement =    El("div", "bubble-toggle-text", undefined, text)
+      row.append(bubble, textElement)
+      return row
+    }
+    function createConnector() {
+      return El("div", "toggle-bubble-connector " + args.orientation)
+    }
+    let toggleContainer = El("div", "bubble-toggle-container " + args.orientation)
+
+    toggleContainer.append(createRow(args.options[0]))
+    for(let i = 0; i < bubbleCount; i++) {
+      toggleContainer.append(createConnector(), createRow(args.options[i + 1]))
+    }
+
+    return toggleContainer
+  }
 }
 
 El.hasAllClasses = (element, classes = []) => {
@@ -42,7 +67,7 @@ El.hasAllClasses = (element, classes = []) => {
 function SVGEl(
   elementTagName = "svg", 
   cssClass = "words separated by spaces", 
-  attributes = [] /* = [["key", "value"]] */,
+  attributes = [], /* = [["key", "value"]] */
   innerText = "",
 ) {
   let element = document.createElementNS("http://www.w3.org/2000/svg", elementTagName)
@@ -57,9 +82,6 @@ function SVGEl(
   return element
 }
 
-function getChildIndex(node) {
-  return Array.prototype.indexOf.call(node.parentNode.childNodes, node)
-}
-function getChildIndexForElement(node) {
-  return Array.prototype.indexOf.call(node.parentElement.childNodes, node)
+function getChildIndex(HTMLNode) {
+  return Array.prototype.indexOf.call(HTMLNode.parentNode.childNodes, HTMLNode)
 }

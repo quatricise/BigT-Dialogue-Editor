@@ -16,22 +16,15 @@ class PropertiesPanel {
   }
   show() {
     this.open = true
-    console.log("show")
     this.elements.container.classList.remove("hidden")
-    this.updateIconsForNodes()
   }
   hide() {
     this.open = false
-    console.log("hide")
     this.elements.container.classList.add('hidden')
-    this.updateIconsForNodes()
   }
   toggle() {
-    console.log("toggle")
-    if(!this.open) 
-      this.show()
-    else 
-      this.hide()
+    this.open ? this.hide() : this.show()
+    this.updateIconsForNodes()
   }
   updateIconsForNodes() {
     Qa(".dialogue-node-widget.list").forEach(icon => {
@@ -43,14 +36,16 @@ class PropertiesPanel {
   }
   //#region HTML layer
   createHtml(viewportSide) {
-    let element =             El("div", "fact-editor " + viewportSide)
+    let element =             El("div", "properties-panel " + viewportSide)
     let header =              El("div", "node-properties-header", undefined, "Node properties")
-    let buttonClose =         El("div", "dialogue-node-widget remove")
-    let criteriaContainer =   El("div", "fact-editor-criteria-container")
-    let criteriaHeader =      El("div", "fact-editor-criteria-header", undefined, "Criteria")
-    let addCriterionButton =  El("div", "fact-editor-add-criterion-button ui-graphic")
+    let buttonClose =         El("div", "node-properties-close-button")
+    let arrowClose =          El("img", "small-arrow", [["src", "assets/icons/iconSmallArrow.png"], ["id", "node-properties-close-arrow"]])
+    let criteriaContainer =   El("div", "properties-panel-criteria-container")
+    let criteriaHeader =      El("div", "properties-panel-criteria-header", undefined, "Criteria")
+    let addCriterionButton =  El("div", "properties-panel-add-criterion-button ui-graphic")
 
     criteriaContainer.append(criteriaHeader, addCriterionButton)
+    buttonClose.append(arrowClose)
     header.append(buttonClose)
     element.append(header, criteriaContainer)
 
@@ -63,8 +58,8 @@ class PropertiesPanel {
   }
   createCriterionHTML(criterion) {
     let container = El("div", "criterion-container")
-    let addRequirementButton = El("div", "fact-editor-add-requirement-button ui-graphic")
-    let deleteCriterionButton = El("div", "fact-editor-delete-criterion-button ui-graphic")
+    let addRequirementButton = El("div", "properties-panel-add-requirement-button ui-graphic")
+    let deleteCriterionButton = El("div", "properties-panel-delete-criterion-button ui-graphic")
     let buttons = El("div", "criterion-buttons")
 
     container.onclick =             () => this.setActiveCriterion(criterion)
@@ -130,7 +125,7 @@ class PropertiesPanel {
         this.createRequirementHTML(criterion, requirement, index)
       }
     })
-    this.elements.criteriaHeader.innerText = `Criteria [${this.gameWindow.activeNode.criteria.length}]`
+    this.elements.criteriaHeader.innerText = `Criteria [ ${this.gameWindow.activeNode.criteria.length} ]`
   }
   //#endregion HTML layer
   //#region data manipulation

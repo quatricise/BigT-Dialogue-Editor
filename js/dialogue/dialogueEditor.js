@@ -18,6 +18,8 @@ class DialogueEditor extends GameWindow {
 
     /* this is only filled upon opening a folder */
     this.characters = []
+
+    this.characterVariables = new Set()
     
     /* an element that's visually highlighted using a blue outline */
     this.highlighted = null
@@ -293,6 +295,29 @@ class DialogueEditor extends GameWindow {
     else
       this.fetchDialogueData(filename)
   }
+  renameFile(filename, newName) {
+    if(this.files.get(newName)) return alert("File already exists")
+
+    let file = this.files.get(filename)
+    file.header.name = newName
+    this.files.set(newName, file)
+    this.files.delete(filename)
+    
+
+    if(this.dialogueName == filename)
+      this.dialogueName = newName
+
+    this.reconstructFilesHTML()
+  }
+  reconstructFilesHTML() {
+    Qa(".dialogue-node-file-tab").forEach(tab => tab.remove())
+    Qa(".sidebar-file-row").forEach(row => row.remove())
+
+    /* generate rows from files */
+    this.files.forEach((file, index) => {
+      this.createSidebarFileRow(file.header.name)
+    })
+  }
   fetchDialogueData(filename) {
     this.storeDialogueData()
     this.clearEditor()
@@ -462,7 +487,7 @@ class DialogueEditor extends GameWindow {
     if(Q(`.dialogue-node-file-tab[data-filename=${filename}]`)) return
 
     let container =   El("div", "dialogue-node-file-tab")
-    let title =       El("div", "dialogue-node-file-title", undefined, filename)
+    let title =       El("div", "dialogue-node-file-tab-name", undefined, filename)
     let filler =      El("div", "filler")
     let closeButton = El("div", "dialogue-node-file-close-button", [["title", "Close tab"]])
 
@@ -700,9 +725,6 @@ class DialogueEditor extends GameWindow {
     if(event.code === "KeyE") {
       this.saveFile()
     }
-    if(event.code === "KeyI") {
-      this.openFile()
-    }
     if(event.code === "KeyF") {
       this.propertiesPanel.toggle()
     }
@@ -736,6 +758,20 @@ class DialogueEditor extends GameWindow {
         let connectionIndex = this.connectionData.outputSocketIndex ?? this.activeNode.out.length
         this.activeNode.createConnection(node, connectionIndex)
         this.reconstructHTML()
+
+        /* align new node with active node */
+        if(keys.shift) {
+          let extraOffset = (Math.max(0, this.activeNode.out.length - 1)) * 20
+          let rect = this.activeNode.element.getBoundingClientRect()
+          node.pos.x = rect.left + extraOffset
+          node.pos.y = rect.top + rect.height + 20
+
+          /* when there are other outputs already, align the new node with them and adjust all nodes to fit */
+          if(this.activeNode.out.length > 1) {
+            let siblings = this.activeNode.out.map(outConn => outConn.to)
+            this.setOptionTidyUp("horizontal", siblings)
+          }
+        }
       }
     }
 
@@ -868,7 +904,7 @@ class DialogueEditor extends GameWindow {
         this.editCancel() 
       else
       /* when you click outside of a node */
-      if(!target.closest(".dialogue-node") && !target.closest(".fact-editor")) 
+      if(!target.closest(".dialogue-node") && !target.closest(".properties-panel")) 
         this.editCancel()
     }
 
@@ -1006,12 +1042,12 @@ class DialogueEditor extends GameWindow {
         this.editCancel()
         this.state.set("deleting")
       }
-      if(target.closest(".fact-container")) {
-        this.propertiesPanel.toggle(event)
-      }
+    }
+    if(target.closest(".node-properties-close-button")) {
+      this.propertiesPanel.toggle(event)
     }
 
-    if(target.closest(".fact-editor-delete-criterion-button")) {
+    if(target.closest(".properties-panel-delete-criterion-button")) {
       let index = +target.closest(".criterion-container").dataset.criterionindex
       this.propertiesPanel.deleteCriterion(index)
     }
@@ -1086,6 +1122,13 @@ class DialogueEditor extends GameWindow {
       let tab = Q(`.dialogue-node-file-tab[data-filename=${filename}]`)
       if(target.closest(".dialogue-node-file-close-button")) {
         this.deleteFile(filename)
+      }
+      else 
+      if(keys.ctrl) {
+        let newName = window.prompt("Rename file", filename)
+        if(newName)
+          this.renameFile(filename, newName)
+        keys.ctrl = false
       }
       else {
         this.openFile(filename)
@@ -1190,7 +1233,12 @@ class DialogueEditor extends GameWindow {
       }
     }
 
-    if(target.closest(".fact-editor .dialogue-node-widget.remove")) {
+    /* character variable setting */
+    if(target.closest("#add-character-variable-button")) {
+      this.createCharacterVariable()
+    }
+
+    if(target.closest(".properties-panel .dialogue-node-widget.remove")) {
       this.propertiesPanel.hide()
     }
     if(target.closest(".dialogue-editor-section-title")) {
@@ -1216,7 +1264,7 @@ class DialogueEditor extends GameWindow {
   }
   handleMiddleDown(event) {
     let target = event.target
-    if(target.closest(".fact-editor")) return
+    if(target.closest(".properties-panel")) return
 
     this.state.set("panning")
   }
@@ -1364,7 +1412,7 @@ class DialogueEditor extends GameWindow {
     this.reconstructHTML()
   }
   handleWheel(event) {
-    if(event.target.closest(".fact-editor")) return
+    if(event.target.closest(".properties-panel")) return
     if(event.target.closest(".search-popup")) return
 
     if(keys.shift)
@@ -1397,25 +1445,24 @@ class DialogueEditor extends GameWindow {
     this.nodes.forEach(node => node.pos.y *= avgHeightDifference)
     this.reconstructHTML()
   }
-  setOptionTidyUp(forceDirection = null) {
+  setOptionTidyUp(forceDirection = null, nodes = this.selected.nodes) {
     let spacing = 20
 
-    let topMost =     Math.min(...this.selected.nodes.map(node => node.pos.y))
-    let bottomMost =  Math.max(...this.selected.nodes.map(node => node.pos.y))
-    let leftMost =    Math.min(...this.selected.nodes.map(node => node.pos.x))
-    let rightMost =   Math.max(...this.selected.nodes.map(node => node.pos.x))
+    let topMost =     Math.min(...nodes.map(node => node.pos.y))
+    let bottomMost =  Math.max(...nodes.map(node => node.pos.y))
+    let leftMost =    Math.min(...nodes.map(node => node.pos.x))
+    let rightMost =   Math.max(...nodes.map(node => node.pos.x))
 
     let isHorizontal = (Math.abs(bottomMost - topMost) / Math.abs(leftMost - rightMost)) < 1
 
     if(forceDirection == "vertical") isHorizontal = false
     if(forceDirection == "horizontal") isHorizontal = true
 
-    /* okay this shit is wack, if the nodes aren't all the same dimension, this breaks */
     if(isHorizontal) {
-      this.selected.nodes = this.selected.nodes.sort((a, b) => a.pos.x - b.pos.x)
-      let rects = this.selected.nodes.map(node => node.element.getBoundingClientRect())
+      nodes = nodes.sort((a, b) => a.pos.x - b.pos.x)
+      let rects = nodes.map(node => node.element.getBoundingClientRect())
 
-      this.selected.nodes.forEach((node, index) => {
+      nodes.forEach((node, index) => {
         node.pos.y = topMost
         if(index === 0) return
         
@@ -1427,12 +1474,12 @@ class DialogueEditor extends GameWindow {
       })
     }
     else {
-      this.selected.nodes = this.selected.nodes.sort((a, b) => a.pos.y - b.pos.y)
-      let rects = this.selected.nodes.map(node => node.element.getBoundingClientRect())
+      nodes = nodes.sort((a, b) => a.pos.y - b.pos.y)
+      let rects = nodes.map(node => node.element.getBoundingClientRect())
       
       let extraOffset = 0
 
-      this.selected.nodes.forEach((node, index) => {
+      nodes.forEach((node, index) => {
         node.pos.x = leftMost
         if(index === 0) return
         
@@ -1442,7 +1489,7 @@ class DialogueEditor extends GameWindow {
         }
 
         /* minor adjustments per node type */
-        if(this.selected.nodes[index - 1].type === "responsePicker")
+        if(nodes[index - 1].type === "responsePicker")
           extraOffset += 20
 
         node.pos.y = yOffset + extraOffset
@@ -1460,6 +1507,40 @@ class DialogueEditor extends GameWindow {
 
   }
   //#endregion
+  createCharacterVariable() {
+    let variableName = "variable_" + this.characterVariables.size
+    this.characterVariables.add(variableName)
+
+    let container =         El("div", "variable-character-row")
+    let thumbnail =         El("img", "sidebar-character-thumbnail", [["src", "assets/portraits/empty.png"]])
+    let name =              El("div", "sidebar-character-name", undefined, variableName)
+    let filler =            El("div", "filler")
+    let iconContainer =     El("div", "settings-icon-container")
+    let iconSettings =      El("img", "variable-character-settings-icon", [["src", "assets/icons/iconSettings.png"]])
+
+    iconContainer.append(iconSettings)
+    container.append(thumbnail, name, filler, iconContainer)
+    Q("#character-variables-container").append(container)
+    this.editCharacterVariable()
+  }
+  editCharacterVariable() {
+    let editPanel = El("div", "character-variable-edit-panel")
+    
+    let toggle = El.special("bubble-toggle", 
+      {
+        orientation: "vertical", 
+        options: ["Any", "From list"], 
+        actions: []
+      })
+    editPanel.append(toggle)
+    Q(".variable-character-row").after(editPanel)
+  }
+  renameCharacterVariable() {
+
+  }
+  deleteCharacterVariable() {
+
+  }
   contextMenuCreate() {
     if(this.contextMenu) 
       this.contextMenuDelete()

@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="css/cursor.css">
   <link rel="stylesheet" href="css/general.css">
   <link rel="stylesheet" href="css/unsorted.css">
-  <link rel="stylesheet" href="css/fact.css">
   <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/dialogueEditor.css">
   <link rel="stylesheet" href="css/dialogueScreen.css">
@@ -25,9 +24,8 @@
     <div id="dialogue-editor-navbar" class="dialogue-editor-navbar">
       <div class="editor-label">
         <img class="editor-label-icon" src="assets/icons/iconDialogueEditor.png" alt="">
-        <span>Dialogue editor</span>
+        <span>Dialogue&nbsp;editor</span>
       </div>
-      <!-- <div class="dialogue-name" title="Click to rename">Dialogue name</div> -->
       <div id="navbar-files" class="navbar-files tiny-scrollbar"></div>
       <div class="filler"></div>
       <div style="display: flex; align-items: center;">
@@ -59,7 +57,7 @@
         <div class="add-file-text">New file</div>
       </div>
       <div class="sidebar-heading">
-        <div id="sidebar-left-actions">Options</div>
+        <div id="sidebar-left-options">Options</div>
       </div>
       <div class="dialogue-editor-options">
         <div class="dialogue-editor-option" title="Deleting nodes requires confirmation."                                 data-option="safeMode">           Safe mode</div>
@@ -72,6 +70,23 @@
         <div id="sidebar-right-characters-heading">Characters</div>
       </div>
       <div id="sidebar-right-character-list"></div>
+      <div id="character-list-heading" class="sidebar-heading">
+        <div id="sidebar-right-characters-variable-heading">Character variables</div>
+      </div>
+      <div id="character-variables-container">
+        <div class="variable-character-row">
+          <img class="sidebar-character-thumbnail" src="assets/portraits/empty.png">
+          <div class="sidebar-character-name" title="Click to rename variable">Empty</div>
+          <div class="filler"></div>
+          <div class="settings-icon-container" title="Edit variable">
+            <img src="assets/icons/iconSettings.png" alt="" class="variable-character-settings-icon">
+          </div>
+        </div>
+      </div>
+      <div id="add-character-variable-button">
+        <img src="assets/icons/iconPlus.png" alt="" class="icon-24">
+        <div>Add character variable</div>
+      </div>
     </div>
   </div>
 

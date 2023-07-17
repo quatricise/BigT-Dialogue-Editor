@@ -16,8 +16,8 @@
   --dark-5: #4c5155;
   --dark-6: #62696e;
   --dark-7: #757e85;
-  --bright-3: #9da6af;
-  --bright-4: #888f96;
+  --bright-3: hsl(210, 6%, 65%);
+  --bright-4: hsl(210, 6%, 56%);
   
   /* new ui colors */
   --color-darkred-0: #22201f;
