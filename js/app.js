@@ -6,9 +6,6 @@ let lastTime = 0
 /* where the global modal window is stored in case it fires */
 let modal = null
 
-/* legacy feature */
-let collisionChecksPerFrame = 0
-
 const mouse  = new Mouse()
 const dialogueEditor = new DialogueEditor()
 
@@ -61,6 +58,7 @@ function handleGlobalInput(e) {
   updateKeys(e)
   mouse.handleInput(e)
   dialogueEditor.handleInput(e)
+  dialogueEditor.uiComponents.forEach(comp => comp.handleInput(e))
 }
 
 /* update the editor */

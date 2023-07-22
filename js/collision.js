@@ -106,7 +106,6 @@ class Collision {
   static auto(hitbox1, hitbox2) {
     if(!hitbox1 || !hitbox2)
       return
-    collisionChecksPerFrame++
     if(this[hitbox1.type + hitbox2.type.capitalize()])
       return this[hitbox1.type + hitbox2.type.capitalize()](hitbox1, hitbox2)
     else if(this[hitbox2.type + hitbox1.type.capitalize()])

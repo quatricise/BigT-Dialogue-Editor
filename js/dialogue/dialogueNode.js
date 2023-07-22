@@ -25,6 +25,9 @@ class DialogueNode {
     /* the logical operation used, OR or AND are accepted */
     this.preconditionLogic =  options.preconditionLogic ?? "OR"
 
+    /* editor-only features */
+    this.stack = null
+
     dialogueEditor.nodes.push(this)
     this.createHTML()
     this.update()
@@ -377,6 +380,13 @@ class DialogueNode {
 
     /* remove this node from sections if they contain it */
     dialogueEditor.sections.forEach(section => section.nodes.delete(this))
+
+    /* remove this node from stacks if they contain it */
+    if(this.stack) {
+      this.stack.delete(this)
+      if(this.stack.size <= 1)
+        dialogueEditor.deleteStack(this.stack)
+    }
   }
   static types = [
     "text",

@@ -35,6 +35,7 @@ El.special = (name, args = {}) => {
   } 
   if(name === "bubble-toggle") {
     let bubbleCount = args.options ? args.options.length - 1 : 1
+
     function createRow(text) {
       let row =     El("div", "bubble-toggle-row")
       let bubble =  El("div", "toggle-bubble")
@@ -45,8 +46,9 @@ El.special = (name, args = {}) => {
     function createConnector() {
       return El("div", "toggle-bubble-connector " + args.orientation)
     }
-    let toggleContainer = El("div", "bubble-toggle-container " + args.orientation)
 
+    let 
+    toggleContainer = El("div", "bubble-toggle-container " + args.orientation)
     toggleContainer.append(createRow(args.options[0]))
     for(let i = 0; i < bubbleCount; i++) {
       toggleContainer.append(createConnector(), createRow(args.options[i + 1]))

@@ -1,4 +1,4 @@
-class DialogueScreen extends GameWindow {
+class DialogueScreen extends ProgramWindow {
   constructor() {
     super("DialogueScreen")
     this.element = Q("#dialogue-screen")

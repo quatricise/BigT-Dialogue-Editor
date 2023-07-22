@@ -16,6 +16,8 @@
   <link rel="stylesheet" href="css/searchPopup.css">
   <link rel="stylesheet" href="css/gameOverlays.css">
   <link rel="stylesheet" href="css/modal.css">
+
+  <link rel="icon" href="icon.ico" type="image/x-icon">
 </head>
 <body>
   <div id="modal-container" class="hidden"></div>
@@ -60,8 +62,10 @@
         <div id="sidebar-left-options">Options</div>
       </div>
       <div class="dialogue-editor-options">
-        <div class="dialogue-editor-option" title="Deleting nodes requires confirmation."                                 data-option="safeMode">           Safe mode</div>
-        <div class="dialogue-editor-option" title="Hide unnecessary buttons for each node and push them closer together." data-option="compactView">        Compact view</div>
+        <div class="dialogue-editor-option" title="Deleting nodes requires confirmation."                                 data-option="safeMode">         Safe mode</div>
+        <div class="dialogue-editor-option" title="Hide unnecessary buttons for each node and push them closer together." data-option="compactView">      Compact view</div>
+        <div class="dialogue-editor-option" title="Toggle the visual indication of node stacks."                          data-option="displayStacks">    Display node stacks</div>
+        <div class="dialogue-editor-option" title="Automatically update node stacks when a node is added or removed."     data-option="autoUpdateStacks"> Auto-update stacks</div>
       </div>
     </div>
     <div id="sidebar-right" class="sidebar right">
@@ -73,16 +77,7 @@
       <div id="character-list-heading" class="sidebar-heading">
         <div id="sidebar-right-characters-variable-heading">Character variables</div>
       </div>
-      <div id="character-variables-container">
-        <div class="variable-character-row">
-          <img class="sidebar-character-thumbnail" src="assets/portraits/empty.png">
-          <div class="sidebar-character-name" title="Click to rename variable">Empty</div>
-          <div class="filler"></div>
-          <div class="settings-icon-container" title="Edit variable">
-            <img src="assets/icons/iconSettings.png" alt="" class="variable-character-settings-icon">
-          </div>
-        </div>
-      </div>
+      <div id="character-variables-container"></div>
       <div id="add-character-variable-button">
         <img src="assets/icons/iconPlus.png" alt="" class="icon-24">
         <div>Add character variable</div>
@@ -118,9 +113,15 @@
   <script src="js/utility/hitbox.js"></script>
 
 
+  <!-- ui components -->
+  <script src="js/utility/UIComponent.js"></script>
+  <script src="js/utility/checkbox.js"></script>
+  <script src="js/utility/bubbleToggle.js"></script>
+
+
   <script src="js/collision.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/gameWindow.js"></script>
+  <script src="js/programWindow.js"></script>
   <script src="js/binds.js"></script>
   <script src="js/input.js"></script>
   <script src="js/mouse.js"></script>

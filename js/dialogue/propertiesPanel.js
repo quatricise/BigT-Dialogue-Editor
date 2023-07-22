@@ -1,6 +1,6 @@
 class PropertiesPanel {
-  constructor(gameWindow, viewportSide) {
-    this.gameWindow = gameWindow
+  constructor(programWindow, viewportAttachment) {
+    this.programWindow = programWindow
     this.open = true
 
     /* object containing some relevant html elements inside this window */
@@ -12,7 +12,7 @@ class PropertiesPanel {
     this.activeObjects = {
       criterion: null
     }
-    this.createHtml(viewportSide)
+    this.createHtml(viewportAttachment)
   }
   show() {
     this.open = true
@@ -35,8 +35,8 @@ class PropertiesPanel {
     })
   }
   //#region HTML layer
-  createHtml(viewportSide) {
-    let element =             El("div", "properties-panel " + viewportSide)
+  createHtml(viewportAttachment) {
+    let element =             El("div", "properties-panel " + viewportAttachment)
     let header =              El("div", "node-properties-header", undefined, "Node properties")
     let buttonClose =         El("div", "node-properties-close-button")
     let arrowClose =          El("img", "small-arrow", [["src", "assets/icons/iconSmallArrow.png"], ["id", "node-properties-close-arrow"]])
@@ -54,7 +54,7 @@ class PropertiesPanel {
     this.elements.container =         element
     this.elements.criteriaContainer = criteriaContainer
     this.elements.criteriaHeader =    criteriaHeader
-    this.gameWindow.element.append(this.elements.container)
+    this.programWindow.element.append(this.elements.container)
   }
   createCriterionHTML(criterion) {
     let container = El("div", "criterion-container")
@@ -113,19 +113,21 @@ class PropertiesPanel {
     .forEach(element => element.remove())
   }
   refreshStructure() {
-    this.gameWindow.activeNode.criteria.forEach((criterion, index) => criterion.index = index)
+    this.programWindow.activeNode.criteria.forEach((criterion, index) => criterion.index = index)
 
     this.clearHTML()
     this.refreshHTML()
   }
   refreshHTML() {
-    this.gameWindow.activeNode.criteria.forEach(criterion => {
+    this.programWindow.activeNode.criteria.forEach(criterion => {
       this.createCriterionHTML(criterion)
       for(let [index, requirement] of criterion.requirements.entries()) {
         this.createRequirementHTML(criterion, requirement, index)
       }
     })
-    this.elements.criteriaHeader.innerText = `Criteria [ ${this.gameWindow.activeNode.criteria.length} ]`
+    this.elements.criteriaHeader.innerText = `Criteria [ ${this.programWindow.activeNode.criteria.length} ]`
+    this.programWindow.reconstructHTML()
+    this.programWindow.reflowNodeStack()
   }
   //#endregion HTML layer
   //#region data manipulation
@@ -134,43 +136,43 @@ class PropertiesPanel {
     this.refreshStructure()
   }
   deleteRequirementFromCriterion(criterionIndex, requirementIndex) {
-    this.gameWindow.activeNode.criteria[criterionIndex].requirements.removeAt(requirementIndex)
+    this.programWindow.activeNode.criteria[criterionIndex].requirements.removeAt(requirementIndex)
     this.refreshStructure()
   }
   createCriterion() {
     let 
     criterion = new Criterion()
-    criterion.index = this.gameWindow.activeNode.criteria.length
-    this.gameWindow.activeNode.criteria.push(criterion)
+    criterion.index = this.programWindow.activeNode.criteria.length
+    this.programWindow.activeNode.criteria.push(criterion)
     this.refreshStructure()
   }
   toggleRequirementType(criterionIndex, requirementIndex) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     requirement.flipType()
     this.refreshStructure()
   }
   flipRequirementExpectedValue(criterionIndex, requirementIndex) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     requirement.expectedValue = !requirement.expectedValue
     this.refreshStructure()
   }
   setRequirementIdentifier(criterionIndex, requirementIndex, value) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     requirement.identifier = value
     this.refreshStructure()
   }
   setRequirementEntryObject(criterionIndex, requirementIndex, value) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     requirement.entryObject = value
     this.refreshStructure()
   }
   setRequirementAccessorChain(criterionIndex, requirementIndex, value) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     requirement.accessorChain = value.replaceAll(" ", "").split(",")
     this.refreshStructure()
   }
@@ -178,13 +180,13 @@ class PropertiesPanel {
     if(!Requirement.conditionTypes.findChild(value)) return console.error("invalid condition type")
 
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     requirement.condition.type = value
     this.refreshStructure()
   }
   setConditionTestValue(criterionIndex, requirementIndex, value) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     isNaN(+value) ? 
     requirement.condition.testValue = value :
     requirement.condition.testValue = +value
@@ -192,7 +194,7 @@ class PropertiesPanel {
   }
   cycleConditionType(criterionIndex, requirementIndex) {
     let 
-    requirement = this.gameWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
+    requirement = this.programWindow.activeNode.criteria[criterionIndex].requirements[requirementIndex]
     let index = Requirement.conditionTypes.indexOf(requirement.conditionType)
     requirement.condition.type = Requirement.conditionTypes[++index] ?? Requirement.conditionTypes[0]
     this.refreshStructure()
@@ -204,12 +206,12 @@ class PropertiesPanel {
     this.activeElements.criterion.classList.add("active")
   }
   deleteCriterion(criterionIndex) {
-    this.gameWindow.activeNode.criteria.removeAt(criterionIndex)
+    this.programWindow.activeNode.criteria.removeAt(criterionIndex)
     this.refreshStructure()
   }
   //#endregion data manipulation
   toggleEditability() {
-    if(this.gameWindow.activeNode) {
+    if(this.programWindow.activeNode) {
       this.elements.container.classList.remove("disabled")
     }
     else {

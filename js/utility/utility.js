@@ -75,8 +75,8 @@ function mode(arr) {
 // usage: [].reduce(reducer()) or something
 const reducer = (accumulator, curr) => accumulator + curr;
 
-function worldToClientPosition(gameWindow, position) {
-  return position.clone().sub(gameWindow.camera.transform.position).add(new Vector(cw/2, ch/2))
+function worldToClientPosition(programWindow, position) {
+  return position.clone().sub(programWindow.camera.transform.position).add(new Vector(cw/2, ch/2))
 }
 
 function getLocalMousePositionForElement(mouseEvent, element) {

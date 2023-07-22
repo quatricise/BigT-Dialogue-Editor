@@ -26,6 +26,9 @@ class DialogueEditorSection {
     })
     nodes.forEach(n => this.nodes.add(n))
   }
+  removeNodes(...nodes) {
+    nodes.forEach(node => this.nodes.delete(node))
+  }
   setName(name) {
     this.name = name
     this.elements.title.innerText = name
@@ -42,7 +45,7 @@ class DialogueEditorSection {
     let topMostPoint =    Math.min(...nodeRects.map(rect => rect.top)) 
     let bottomMostPoint = Math.max(...nodeRects.map(rect => rect.top + rect.height)) 
     
-    let outset = 30
+    let outset = 50
 
     this.elements.container.style.left =    (leftMostPoint - outset) + "px"
     this.elements.container.style.top =     (topMostPoint - outset) + "px"

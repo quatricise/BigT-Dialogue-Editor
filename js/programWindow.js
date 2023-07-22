@@ -1,4 +1,4 @@
-class GameWindow {
+class ProgramWindow {
   constructor(element) {
     this.element = element
     this.windowType = "solid"

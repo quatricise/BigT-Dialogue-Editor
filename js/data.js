@@ -100,4 +100,21 @@ data.person = {
     jobTitle: "captain",
   },
 }
+data.personTags = {
+  merchant: {
+    displayName: "Merchant"
+  },
+  soldier: {
+    displayName: "Soldier"
+  },
+  priest: {
+    displayName: "Priest"
+  },
+  enemy: {
+    displayName: "Enemy"
+  },
+  ally: {
+    displayName: "Ally"
+  },
+}
 data.item = {}

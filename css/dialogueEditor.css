@@ -497,7 +497,7 @@
 
 .dialogue-node-item {
   display: flex;
-  width: 39px;
+  width: 32px;
   height: 100%;
   border-radius: 5px;
   background-color: var(--dark-3);
@@ -569,9 +569,10 @@
   flex-direction: column;
   gap: 2px;
   width: 100%;
-  /* max-height: 60vh; */
   flex-grow: 2;
   overflow-y: auto;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
   padding: 0 5px;
   margin: 5px 0;
 }
@@ -587,14 +588,22 @@
   padding-left: 10px;
 }
 
+.character-variable-edit-panel {
+  background-color: var(--dark-3);
+}
+
 #character-variables-container {
   display: flex;
   flex-direction: column;
-  border-radius: 5px;
-  margin: 0 10px;
   width: calc(100% - 20px);
+  margin: 0 10px;
+  border: 2px solid var(--dark-2);
+  border-radius: 5px;
   background-color: var(--dark-2);
   overflow: hidden;
+}
+#character-variables-container:empty {
+  display: none;
 }
 
 .variable-character-row {
@@ -602,7 +611,7 @@
   align-items: center;
   width: 100%;
   gap: 5px;
-  padding: 0 5px;
+  padding: 5px;
   height: 40px;
   color: white;
   background-color: var(--dark-2);
@@ -691,6 +700,7 @@
 .sidebar-file-row {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 5px;
   width: 100%;
   padding: 1px 5px;
@@ -701,6 +711,12 @@
 }
 .sidebar-file-row:hover {
   background-color: var(--dark-5);
+}
+
+.sidebar-file-row-name {
+  flex-grow: 1;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .sidebar-file-row .dialogue-icon-file {
@@ -812,14 +828,17 @@
 .dialogue-editor-options {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 5px 10px;
+  gap: 4px;
+  padding: 2px 10px;
   margin-bottom: 5px;
   color: white;
   z-index: 10;
 }
 .dialogue-editor-option {
-  padding: 5px 20px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 5px;
   color: var(--bright-3);
   border: 2px solid var(--dark-4);
   border-radius: 5px;
@@ -831,6 +850,10 @@
 .dialogue-editor-option.active {
   color: white;
   border-color: white;
+}
+
+.dialogue-editor-option .checkbox {
+  order: -1;
 }
 
 #dialogue-editor-box-selection {
@@ -912,11 +935,12 @@
 
 .dialogue-editor-section-header {
   position: absolute;
-  top: -35px;
+  top: -40px;
   left: -2px;
   display: flex;
   gap: 5px;
   align-items: center;
+  z-index: 10;
 }
 
 .dialogue-editor-section-header.right {
@@ -925,7 +949,7 @@
 }
 .dialogue-editor-section-header.bottom {
   top: unset;
-  bottom: -35px;
+  bottom: -40px;
 }
 
 .dialogue-editor-section-title {
@@ -934,6 +958,7 @@
   width: max-content;
   padding: 5px;
   pointer-events: all;
+  background-color: var(--dark-2);
 }
 
 .dialogue-editor-section-title:hover {
@@ -949,9 +974,15 @@
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: all;
+  background-color: var(--dark-2);
 }
 .dialogue-editor-section-delete-button:hover {
   background-color: var(--dark-3);
+}
+
+.section-highlighted {
+  background-color: #1e54e70f;
+  border-color: #1e54e740;
 }
 
 #add-file-button {
@@ -1032,20 +1063,31 @@
 .sidebar-character-row {
   display: flex;
   align-items: center;
-  gap: 5px;
   border-radius: 5px;
   padding: 5px;
   color: white;
   background-color: var(--dark-2);
   cursor: var(--cursor-pointer);
 }
-.sidebar-character-row:hover {
-  background-color: var(--dark-5);
-}
 
 .sidebar-character-thumbnail {
   width: 32px;
   height: 32px;
+}
+
+.sidebar-character-name,
+.sidebar-character-variable-name {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-left: 5px;
+}
+
+.sidebar-character-name:hover,
+.sidebar-character-variable-name:hover {
+  background-color: var(--dark-3);
 }
 
 .insert-node-widget {
@@ -1083,7 +1125,7 @@
 }
 
 .properties-panel.disabled {
-  filter: contrast(0.75) brightness(0.5);
+  filter: contrast(0.75) brightness(0.5) saturate(2.5);
   pointer-events: none!important;
 }
 
@@ -1222,7 +1264,7 @@
   display: flex;
   gap: 5px;
   order: 2;
-  padding: 0 10px;
+  padding: 4px 10px 0;
 }
 
 .properties-panel-add-criterion-button {
