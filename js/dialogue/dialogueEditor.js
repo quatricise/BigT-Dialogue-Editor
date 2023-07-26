@@ -2,7 +2,7 @@ class DialogueEditor extends ProgramWindow {
   constructor() {
     super(Q('#dialogue-editor'))
     this.dialogueName = null
-    this.description = "Dialogue description"
+    this.dialogueDescription = "Dialogue description"
     this.sections = new Set()
     this.stacks = new Set()
     this.nodes = []
@@ -201,6 +201,12 @@ class DialogueEditor extends ProgramWindow {
       data.files.forEach(file => {
         let filename = file.replace(".json", "")
         this.createSidebarFileRow(filename)
+
+        this.fetchDialogueData(filename, (rawData) => {
+          this.constructDialogueData(rawData)
+          this.storeDialogueData()
+          this.clearEditor()
+        })
       })
       this.characters = data.characters
     })
@@ -252,8 +258,11 @@ class DialogueEditor extends ProgramWindow {
     Q("#sidebar-right-character-list").append(container)
   }
   newFile() {
-    /* this is to prevent saving a file under null */
-    if(this.dialogueName) this.storeDialogueData()
+    /* this is to prevent saving a file under 'null' */
+    if(this.dialogueName) {
+      this.storeDialogueData()
+      this.clearEditor()
+    }
 
     let filename = "dialogue_0"
     let attempts = 0
@@ -276,25 +285,24 @@ class DialogueEditor extends ProgramWindow {
     this.createTabForFile(filename)
 
     /* send data to the server and make an actual json file */
-    Server.saveFile(this.folder, this.dialogueName, this.files.get(this.dialogueName))
     this.storeDialogueData()
-    this.clearEditor()
+    this.saveFile()
+    console.log(this.dialogueName)
   }
   deleteFile(name) {
     if(!window.confirm(`Really delete file: ${name}?`)) return
-    let file = this.files.get(name)
-    if(!file) return
+    if(!this.files.has(name)) return
+    
+    Server.deleteFile(this.folder, name)
+    .then((status) => {console.log(status.statusText)})
+
     this.files.delete(name)
-    console.log(`Deleted file: ${name}`)
 
     /* remove file tabs and sidebar items */
-    Qa(".sidebar-file-row, .dialogue-node-file-tab").forEach(element => {
-      if(!this.files.has(element.dataset.filename)) {
-        element.remove()
-      }
-    })
+    let toRemove = Qa(".sidebar-file-row, .dialogue-node-file-tab").filter(element => !this.files.has(element.dataset.filename))
+    toRemove.forEach(e => e.remove())
 
-    this.reset()
+    this.clearEditor()
     this.reconstructHTML()
   }
   openFile(name) {
@@ -302,25 +310,31 @@ class DialogueEditor extends ProgramWindow {
     if(!filename) filename = window.prompt("dialogue filename", "intro")
     if(!filename) return
 
-    if(this.files.get(filename))
+    if(this.files.get(filename)) {
       this.loadDialogueData(filename)
-    else
-      this.fetchDialogueData(filename)
+    }
+    else {
+      throw "this should not ever happen"
+    }
   }
   renameFile(oldName, unsafeNewName) {
-    let name = unsafeNewName.replace(/[^A-Za-z0-9_]/g, "")
+    let newName = unsafeNewName.replace(/[^A-Za-z0-9_]/g, "")
 
     /* safechecking */
-    if(name === "") return alert("Names can only contain the english alphabet, arabic numerals or underscores.")
-    if(this.files.get(name)) return alert("File already exists")
+    if(newName === "") return alert("Names can only contain the english alphabet, arabic numerals or underscores.")
+    if(this.files.get(newName)) return alert("File already exists")
 
     let file = this.files.get(oldName)
-    file.header.name = name
-    this.files.set(name, file)
+    file.header.dialogueName = newName
+    this.files.set(newName, file)
     this.files.delete(oldName)
     
-    if(this.dialogueName == oldName)
-      this.dialogueName = name
+    file.header.apply()
+
+    Server.renameFile(this.folder, oldName, newName)
+    .then((status) => {console.log(status)})
+
+    this.saveFile()
 
     this.reconstructFilesHTML()
   }
@@ -330,90 +344,24 @@ class DialogueEditor extends ProgramWindow {
 
     /* generate rows from files */
     this.files.forEach((file, index) => {
-      this.createSidebarFileRow(file.header.name)
-    })
-  }
-  fetchDialogueData(filename) {
-    /* this is used to get the file, then store it into this.files */
-    /* it also stores data, clears editor, opens the fetched file, which it all SHOULDN'T FUCKING DO, because it's stupid */
-
-    this.storeDialogueData()
-    this.clearEditor()
-
-    this.dialogueName = filename
-    let url = `dialogue/${this.folder}/${filename}.json`
-
-    readJSONFile(url, (text) => {
-      let nodes = JSON.parse(text)
-
-      /* create nodes */
-      nodes.forEach(node => {
-        new DialogueNode(
-          node.type, 
-          new Vector(node.pos.x, node.pos.y), 
-          {
-            text:              node.text, 
-            speaker:           node.speaker, 
-            id:                node.id, 
-            criteria:          node.criteria,
-            labels:            node.labels, 
-            factsToSet:        node.factsToSet, 
-            tree:              node.tree, 
-            preconditions:     node.preconditions, 
-            preconditionLogic: node.preconditionLogic, 
-            tone:              node.tone,
-            transfer:          node.transfer,
-            recipient:         node.recipient
-          }
-        )
-      })
-      /* create connections between nodes */
-      nodes.forEach(node => {
-        node.out.forEach((outConnection, index) => {
-          let origin =      this.nodes.find(n => n.id === node.id)
-          let destination = this.nodes.find(n => n.id === outConnection.to)
-          origin.createConnection(destination, index)
-        })
-      })
-      /* reconstruct html */
-      this.reconstructHTML()
-
-      /* create a tab for this file */
-      this.createTabForFile(filename)
-
-      this.createCharacterList()
-
-      this.storeDialogueData()
+      this.createSidebarFileRow(file.header.dialogueName)
     })
   }
   saveFile() {
-    /* 
-    this will need to be reworked to support the new format for dialogues, with the header
-    also: support the new saving system using Node
-    the whole project will need to be served via different means so that it doesn't refresh each time the directory updates
-    */
+    let header = {}
+    let nodes = []
 
-    /* new format structure */
-    {
-      let header = {
-        name: this.dialogueName,
-        sections: Array.from(this.sections),
-        description: this.description
-      }
-      let nodes = []
-      let exportData = {
-        header,
-        nodes
-      }
+    let templateHeader = new DialogueDataHeader()
+    for(let key in templateHeader) {
+      header[key] = this[key]
     }
-    /*  */
+    header = DialogueDataHeader.toObj(header)
 
-    let exportData = []
+    /* prepare nodes for export */
     this.nodes.forEach(node => {
       let inNodes = node.in.map(n => {return {index: n.index, to: n.from.id}})
       let outNodes = node.out.map(n => {return {index: n.index, to: n.to.id}})
 
-      /* we need to better filter what is getting through, so no node-specific properties */
       let obj = {
         id: node.id,
         pos: node.pos,
@@ -458,54 +406,73 @@ class DialogueEditor extends ProgramWindow {
           break
         }
       }
-
-      exportData.push(obj)
+      nodes.push(obj)
     })
-    exportToJSONFile(exportData, this.dialogueName)
-  }
-  storeDialogueData() {
-    /* this stores data to this.files, stored under a unified format called DialogueData */
-    if(!this.dialogueName) return
+    
+    let exportData = {header, nodes}
 
-    console.log(this.dialogueName)
-
-    let header = {
-      name: this.dialogueName,
-      sections: this.sections,
-      characterVariables: this.characterVariables,
-      description: this.description
-    }
-    let dialogueData = new DialogueData(header, _.cloneDeep(this.nodes))
-    this.files.set(this.dialogueName, dialogueData)
+    /* send data to server */
+    Server.saveFile(this.folder, this.dialogueName, exportData)
+    .finally(isSuccess => console.log(`Saving was ${isSuccess ? "" : "un"}successful.`))
   }
-  clearEditor() {
-    /* this part is almost like reset() but it doesn't call destroy() on the nodes, it hides them only */
-    this.nodes.forEach(node => {
-      node.element.remove()
-      node.element.classList.remove("active", "selected")
+  constructDialogueData(rawData) {
+    /* actually, this function should CONSTRUCT the data, but not LOAD it */
+
+    let dialogueData = JSON.parse(rawData)
+    let nodes = dialogueData.nodes
+    let headerPlain = dialogueData.header
+
+    /* construct nodes */
+    nodes.forEach(node => {
+      new DialogueNode(
+        node.type, 
+        new Vector(node.pos.x, node.pos.y), 
+        {
+          text:              node.text, 
+          speaker:           node.speaker, 
+          id:                node.id, 
+          criteria:          node.criteria,
+          labels:            node.labels, 
+          factsToSet:        node.factsToSet, 
+          tree:              node.tree, 
+          preconditions:     node.preconditions, 
+          preconditionLogic: node.preconditionLogic, 
+          tone:              node.tone,
+          transfer:          node.transfer,
+          recipient:         node.recipient
+        }
+      )
     })
-    this.sections.forEach(section => section.elements.container.remove())
-    this.nodes = []
-    this.sections = new Set()
-    this.activeNode = null
-    this.selected.nodes = []
-    this.selected.connections = []
-    this.editedData = {}
+
+    /* create connections between nodes */
+    nodes.forEach(node => {
+      node.out.forEach((outConnection, index) => {
+        let origin =      this.nodes.find(n => n.id === node.id)
+        let destination = this.nodes.find(n => n.id === outConnection.to)
+        origin.createConnection(destination, index)
+      })
+    })
+
+    /* construct and apply header */
+    DialogueDataHeader.fromObj(headerPlain)
+    .apply()
+
     this.reconstructHTML()
+    this.createCharacterList()
+  }
+  fetchDialogueData(filename, callback) {
+    let url = `dialogue/${this.folder}/${filename}.json`
+    readJSONFile(url, callback)
   }
   loadDialogueData(filename) {
-    /* this is used only after a file has been fetched and stored locally */
-    let data
-    this.files.forEach(value => {
-      if(value.header.name === filename)
-        {data = value; console.log("Fopund! あなたを見つけた、この小さな野郎")}
-    })
-    if(!data) return
+    let data = this.files.get(filename)
+    if(!data || filename === this.dialogueName) return
 
     this.storeDialogueData()
     this.clearEditor()
 
     this.nodes = data.nodes
+    /* set all things from the header directly to the editor class */
     for(let key in data.header) {
       this[key] = data.header[key]
     }
@@ -516,10 +483,23 @@ class DialogueEditor extends ProgramWindow {
     this.reconstructHTML()
     this.state.set("default")
 
-    /* create a tab for this file */
+    /* create a tab for this file in the navbar */
     this.createTabForFile(filename)
 
     this.createCharacterList()
+  }
+
+  /* this method stores data to this.files, stored under a unified format called DialogueData */
+  storeDialogueData() {
+    if(!this.dialogueName) return
+
+    /* copy props from this class to the header */
+    let header = new DialogueDataHeader()
+    for(let key in header) {
+      header[key] = this[key]
+    }
+    let dialogueData = new DialogueData(header, _.cloneDeep(this.nodes))
+    this.files.set(this.dialogueName, dialogueData)
   }
   hideSidebars() {
     Q("#sidebar-left").classList.add("hidden")
@@ -951,6 +931,7 @@ class DialogueEditor extends ProgramWindow {
     }
     if(event.code === "KeyS" && keys.shift) {
       this.storeDialogueData()
+      this.saveFile()
     }
 
     /* open folder */
@@ -1301,9 +1282,10 @@ class DialogueEditor extends ProgramWindow {
       else 
       if(keys.ctrl) {
         let newName = window.prompt("Rename file", filename)
+        resetModifierKeys()
         if(newName)
           this.renameFile(filename, newName)
-        keys.ctrl = false
+        
       }
       else {
         this.openFile(filename)
@@ -1352,10 +1334,6 @@ class DialogueEditor extends ProgramWindow {
 
     if(target.closest(".icon-export-facts")) {
       this.saveFile()
-    }
-
-    if(target.closest(".icon-import")) {
-      this.openFile()
     }
 
     if(target.closest(".sidebar-folder-icon")) {
@@ -1749,6 +1727,7 @@ class DialogueEditor extends ProgramWindow {
       let rects = nodes.map(node => node.element.getBoundingClientRect())
 
       nodes.forEach((node, index) => {
+        console.log("tidy")
         node.pos.y = bounds.top
         if(index === 0) return
         
@@ -1843,25 +1822,23 @@ class DialogueEditor extends ProgramWindow {
     let axis = this.isStackHorizontal(bounds) ? "x" : "y"
     let nodes = inputNodes.sort((a, b) => a.pos[axis] - b.pos[axis])
 
-    console.log("create stack")
     let stack = new Set()
     nodes.forEach(node => {
       stack.add(node)
       node.stack = stack
     })
     this.stacks.add(stack)
+    console.log("create stack")
   }
   deleteStack(stack) {
-    console.log("delete stack")
     this.nodes.forEach(n => {
       if(n.stack === stack)
         delete n.stack
     })
     this.stacks.delete(stack)
+    console.log("delete stack")
   }
   getStackBounds(nodes) {
-    /* this calculates the bounds of a group of dialogue nodes in units relative to viewport */
-
     let top =     Math.min(...nodes.map(node => node.pos.y))
     let bottom =  Math.max(...nodes.map(node => node.pos.y))
     let left =    Math.min(...nodes.map(node => node.pos.x))
@@ -2436,6 +2413,28 @@ class DialogueEditor extends ProgramWindow {
         )
       })
     })
+  }
+  clearEditor() {
+    /* this part clears the editor and hides nodes and other things */
+    this.nodes.forEach(node => {
+      node.element.remove()
+      node.element.classList.remove("active", "selected")
+    })
+    this.sections.forEach(section => section.elements.container.remove())
+
+    /* reset properties that the DialogueDataHeader uses */
+    let header = new DialogueDataHeader()
+    for(let key in header) {
+      this[key] = header[key]
+    }
+
+    this.nodes = []
+    this.activeNode = null
+    this.selected.nodes = []
+    this.selected.connections = []
+    this.editedData = {}
+
+    this.reconstructHTML()
   }
   reset() {
     let nodes = [...this.nodes]

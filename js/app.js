@@ -20,7 +20,7 @@ window.onresize = () => {
   dialogueEditor.canvas.height = ch
 }
 
-ProgramManager.setWindow(dialogueScreen)
+ProgramManager.setWindow(dialogueEditor)
 
 /* input part */
 function attachListeners() {
@@ -61,6 +61,12 @@ function handleGlobalInput(e) {
   updateKeys(e)
   mouse.handleInput(e)
   ProgramManager.handleInput(e)
+}
+
+function resetModifierKeys() {
+  keys.shift = false
+  keys.ctrl = false
+  keys.alt = false
 }
 
 /* update the editor */

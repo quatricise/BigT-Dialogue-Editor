@@ -272,36 +272,65 @@ class DialogueNode {
     this.factsToSet.splice(index, 1)
     this.refreshHTML()
   }
-  setNodeTree(textField, treeName) {
-    fetch(`data/dialogue/${treeName}.json`)
-    .then((response) => {
-      if(response.ok) {
-        response.json().then(nodes => {
-          /* find exit nodes */
-          let exitNodes = nodes.filter(n => n.out.length === 0)
-          
-          /* delete sockets */
-          let sockets = Array.from(this.element.querySelectorAll(".dialogue-node-socket.out"))
-          sockets.forEach(s => s.remove())
+  setNodeTree(textField, filename) {
+    if(dialogueEditor.files.has(filename)) {
+      let nodes = dialogueEditor.files.get(filename).nodes
 
-          /* create new sockets */
-          for (let i = 0; i < exitNodes.length; i++) {
-            let socketOut = El.special('node-socket-out')
-            socketOut.dataset.index = i
-            socketOut.title = exitNodes[i].type.capitalize().splitCamelCase() + " - " + exitNodes[i].text
-            this.element.querySelector(".dialogue-node-socket-wrapper.out").append(socketOut)
-          }
-          let rect = this.element.querySelector(".dialogue-node-socket-wrapper.out").getBoundingClientRect()
-          this.element.style.minWidth = rect.width + 25 + "px"
-        })
-        this.tree = treeName
-        textField.innerText = treeName
+      /* find exit nodes */
+      let exitNodes = nodes.filter(n => n.out.length === 0)
+      
+      /* delete sockets */
+      let sockets = Array.from(this.element.querySelectorAll(".dialogue-node-socket.out"))
+      sockets.forEach(s => s.remove())
+
+      /* create new sockets */
+      for (let i = 0; i < exitNodes.length; i++) {
+        let socketOut = El.special('node-socket-out')
+        socketOut.dataset.index = i
+        socketOut.title = exitNodes[i].type.capitalize().splitCamelCase() + " - " + exitNodes[i].text
+        this.element.querySelector(".dialogue-node-socket-wrapper.out").append(socketOut)
       }
-      else {
-        textField.innerText = this.tree ?? "Select node tree."
+      let rect = this.element.querySelector(".dialogue-node-socket-wrapper.out").getBoundingClientRect()
+      this.element.style.minWidth = rect.width + 25 + "px"
+      
+      this.tree = filename
+      textField.innerText = filename
+    }
+    else {
+      textField.innerText = this.tree ?? "Select node tree."
         alert("Dialogue tree not found.")
-      }
-    })
+    }
+
+    /* old method */
+    // fetch(`data/dialogue/${treeName}.json`)
+    // .then((response) => {
+    //   if(response.ok) {
+    //     response.json().then(nodes => {
+    //       /* find exit nodes */
+    //       let exitNodes = nodes.filter(n => n.out.length === 0)
+          
+    //       /* delete sockets */
+    //       let sockets = Array.from(this.element.querySelectorAll(".dialogue-node-socket.out"))
+    //       sockets.forEach(s => s.remove())
+
+    //       /* create new sockets */
+    //       for (let i = 0; i < exitNodes.length; i++) {
+    //         let socketOut = El.special('node-socket-out')
+    //         socketOut.dataset.index = i
+    //         socketOut.title = exitNodes[i].type.capitalize().splitCamelCase() + " - " + exitNodes[i].text
+    //         this.element.querySelector(".dialogue-node-socket-wrapper.out").append(socketOut)
+    //       }
+    //       let rect = this.element.querySelector(".dialogue-node-socket-wrapper.out").getBoundingClientRect()
+    //       this.element.style.minWidth = rect.width + 25 + "px"
+    //     })
+    //     this.tree = treeName
+    //     textField.innerText = treeName
+    //   }
+    //   else {
+    //     textField.innerText = this.tree ?? "Select node tree."
+    //     alert("Dialogue tree not found.")
+    //   }
+    // })
   }
   refreshHTML() {
     this[`refresh${this.type.capitalize()}HTML`]()

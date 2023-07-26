@@ -69,4 +69,21 @@ class DialogueEditorSection {
     this.elements.container.remove()
     dialogueEditor.sections.delete(this)
   }
+  static toObj(section) {
+    let obj = {
+      name: section.name,
+      nodes: []
+    }
+    section.nodes.forEach(n => obj.nodes.push(n.id))
+    return obj
+  }
+  static fromObj(obj) {
+    let section = new DialogueEditorSection()
+    section.setName(obj.name)
+    for(let nodeId of obj.nodes) {
+      let node = dialogueEditor.nodes.find(n => n.id === nodeId)
+      section.addNodes(node)
+    }
+    return section
+  }
 }

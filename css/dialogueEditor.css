@@ -48,11 +48,11 @@
   width: 100%;
   padding-right: 10px;
   height: 42px;
-  z-index: 101;
   color: white;
   box-shadow: 0 0 10px 0 var(--dark-1-025);
   background-color: var(--dark-3);
   border-bottom: 2px solid var(--dark-2);
+  z-index: 101;
 }
 
 .dialogue-name {
@@ -555,9 +555,9 @@
   width: 282px;
   max-width: 500px;
   min-width: 222px;
-  height: calc(100% - 40px);
+  height: calc(100% - 42px);
   background-color: var(--dark-3);
-  z-index: 100;
+  z-index: 102;
 }
 .sidebar.left {
   left: 0;

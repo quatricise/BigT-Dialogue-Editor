@@ -1,10 +1,6 @@
 class DialogueData {
-  constructor(header, nodes = []) {
-    this.header = header ?? {
-      name: "Dialogue name",
-      description: "Description",
-      sections: new Set()
-    }
+  constructor(/** @type DialogueDataHeader */ header, /** @type [] */ nodes) {
+    this.header = header
     this.nodes = nodes
   }
 }
