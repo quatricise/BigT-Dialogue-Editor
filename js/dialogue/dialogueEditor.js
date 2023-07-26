@@ -494,11 +494,13 @@ class DialogueEditor extends ProgramWindow {
     if(!this.dialogueName) return
 
     /* copy props from this class to the header */
-    let header = new DialogueDataHeader()
+    let header = DialogueDataHeader.empty()
     for(let key in header) {
       header[key] = this[key]
     }
-    let dialogueData = new DialogueData(header, _.cloneDeep(this.nodes))
+    console.log(header)
+
+    let dialogueData = new DialogueData(header, this.nodes)
     this.files.set(this.dialogueName, dialogueData)
   }
   hideSidebars() {

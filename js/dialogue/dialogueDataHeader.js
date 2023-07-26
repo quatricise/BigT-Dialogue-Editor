@@ -6,6 +6,12 @@ class DialogueDataHeader {
     /** @type Set */    this.stacks = stacks                         ?? new Set()
     /** @type Map */    this.characterVariables = characterVariables ?? new Map()
   }
+  static empty() {
+    let header = new DialogueDataHeader()
+    for(let key in header)
+      header[key] = null
+    return header
+  }
   static toObj(header) {
     let obj = {}
     for(let key in header) {
@@ -60,11 +66,9 @@ class DialogueDataHeader {
           break
         }
         case "sections": {
-          setTimeout(() => {
-            obj.sections.forEach(section => {
-              header.sections.add(DialogueEditorSection.fromObj(section))
-            })
-          }, 200)
+          obj.sections.forEach(section => {
+            header.sections.add(DialogueEditorSection.fromObj(section))
+          })
           break
         }
         case "stacks": {
@@ -85,7 +89,6 @@ class DialogueDataHeader {
   /* this is very important, this translates the header properties to the dialogue editor */
   apply() {
     for(let key in this) {
-      console.log(key)
       dialogueEditor[key] = this[key]
     }
   }

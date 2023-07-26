@@ -221,7 +221,7 @@ class DialogueNode {
   }
   createHTMLAggression() {
     let speaker = El('div', "dialogue-node-row dialogue-node-speaker", [["title", "Speaker"]], this.speaker)
-    let text =    El('div', "dialogue-node-row dialogue-node-row-informational", [["title", "Text"]], "Speaker turns on you. This ends the dialogue.")
+    let text =    El('div', "dialogue-node-row dialogue-node-row-informational", [["title", "Text"]], "Speaker turns aggressive.")
     speaker.dataset.datatype = "speaker"
     speaker.dataset.id = this.id
     this.nodeHTMLContent.append(speaker, text)
