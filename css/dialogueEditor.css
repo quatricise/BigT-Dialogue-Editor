@@ -361,8 +361,6 @@
 .dialogue-node-widget.list {
   background-image: url(../assets/icons/iconList.png);
   cursor: var(--cursor-pointer);
-  /* order: 1; */
-  /* margin-right: 10px; */
 }
 .dialogue-node-widget.list.active {
   background-color: var(--dark-2);
@@ -407,6 +405,11 @@
 }
 .dialogue-node-widget.precondition-logic.or {
   background-image: url(../assets/icons/iconLogicalOR.png);
+  cursor: var(--cursor-pointer);
+}
+.dialogue-node-widget.unfinished {
+  background-image: url(../assets/icons/iconAlert.png);
+  background-size: 75%;
   cursor: var(--cursor-pointer);
 }
 .drag-widget {
@@ -521,7 +524,6 @@
   background-size: contain;
   background-position: center;
   border-radius: 5px;
-  cursor: var(--cursor-pointer);
 }
 .dialogue-node-icon:hover, .fact-add-button:hover {
   background-color: var(--dark-3);
@@ -551,6 +553,8 @@
   display: flex;
   flex-direction: column;
   width: 282px;
+  max-width: 500px;
+  min-width: 222px;
   height: calc(100% - 40px);
   background-color: var(--dark-3);
   z-index: 100;
@@ -650,9 +654,8 @@
   align-items: center;
   gap: 10px;
   width: calc(100% - 20px);
-  height: 40px;
   margin: 4px 10px 0;
-  padding: 0 5px;
+  padding: 5px;
   border-radius: 5px;
   color: var(--bright-3);
 }
@@ -664,7 +667,7 @@
 
 #sidebar-left-options {
   margin-top: 10px;
-  margin-left: 2px;
+  margin-left: 5px;
   padding-left: 5px;
 }
 
@@ -828,8 +831,9 @@
 .dialogue-editor-options {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 2px 10px;
+  gap: 2px;
+  background-color: var(--dark-3);
+  padding: 2px 10px 5px;
   margin-bottom: 5px;
   color: white;
   z-index: 10;
@@ -840,7 +844,6 @@
   gap: 7px;
   padding: 5px 5px;
   color: var(--bright-3);
-  border: 2px solid var(--dark-4);
   border-radius: 5px;
   background-color: var(--dark-3);
 }
@@ -849,7 +852,10 @@
 }
 .dialogue-editor-option.active {
   color: white;
-  border-color: white;
+  background-color: var(--dark-4);
+}
+.dialogue-editor-option.active:hover {
+  background-color: var(--dark-5);
 }
 
 .dialogue-editor-option .checkbox {
@@ -1467,4 +1473,30 @@
 
 .dialogue-editor .fact-list-label {
   background-color: transparent;
+}
+
+.editor-mode-icon {
+  width: 24px;
+  height: 24px;
+}
+.editor-mode-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+#review-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: calc(100% - 8px);
+  padding: 0 10px;
+  margin: 4px;
+  border-radius: 5px;
+  background-color: var(--dark-2);
+}
+#review-button.inactive {
+  color: var(--dark-7);
+}
+#review-button.inactive .icon {
+  filter: opacity(0.5);
 }

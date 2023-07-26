@@ -8,6 +8,10 @@ let modal = null
 
 const mouse  = new Mouse()
 const dialogueEditor = new DialogueEditor()
+const dialogueScreen = new DialogueScreen()
+const UI =             new ProgramUI()
+
+ProgramManager.addWindows(dialogueEditor, dialogueScreen)
 
 window.onresize = () => {
   cw = window.innerWidth
@@ -16,7 +20,7 @@ window.onresize = () => {
   dialogueEditor.canvas.height = ch
 }
 
-dialogueEditor.show()
+ProgramManager.setWindow(dialogueScreen)
 
 /* input part */
 function attachListeners() {
@@ -36,8 +40,7 @@ function attachListeners() {
     handleGlobalInput(e)
   })
   document.addEventListener("mousedown", function (e) {
-    if(e.button === 1) 
-      e.preventDefault()
+    if(e.button === 1) e.preventDefault()
     handleGlobalInput(e)
   })
   document.addEventListener("mouseup", function (e) {
@@ -57,8 +60,7 @@ function attachListeners() {
 function handleGlobalInput(e) {
   updateKeys(e)
   mouse.handleInput(e)
-  dialogueEditor.handleInput(e)
-  dialogueEditor.uiComponents.forEach(comp => comp.handleInput(e))
+  ProgramManager.handleInput(e)
 }
 
 /* update the editor */

@@ -191,6 +191,9 @@
 .icon-restart-conversation:hover, .icon-reset-facts:hover {
   background-color: var(--dark-1);
 }
+.icon-alert {
+  background-image: url(../assets/icons/iconAlert.png);
+}
 
 .icon-20w {
   width: 20px;

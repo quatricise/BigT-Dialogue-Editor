@@ -1,13 +1,30 @@
 class DialogueNode {
-  constructor(type, text, speaker, pos = new Vector(cw/2, ch/2), id, criteria, options = {labels: null, factsToSet: null, tree: null, preconditions: null, preconditionLogic: null}, transfer, recipient) {
-    this.id = id || uniqueID(dialogueEditor.nodes)
+  constructor(
+    type, 
+    pos = new Vector(cw/2, ch/2), 
+    options = {
+      /** @type Number */ id: null, 
+      /** @type String */ speaker: null, 
+      /** @type String */ recipient: null, 
+      /** @type String */ text: null,
+      /** @type [] */     transfer: null,
+      /** @type [] */     criteria: null, 
+      /** @type Object */ labels: null, 
+      /** @type [] */     factsToSet: null, 
+      /** @type String */ tree: null, 
+      /** @type [] */     preconditions: null, 
+      /** @type String */ preconditionLogic: null, 
+      /** @type String */ tone: null
+    }
+  ) {
     this.pos = pos.clone()
     this.type = type
-    this.speaker = speaker || null
-    this.recipient = recipient || null
+    this.id = options.id || uniqueID(dialogueEditor.nodes)
+    this.speaker = options.speaker || null
+    this.recipient = options.recipient || null
     this.tree = options.tree ?? null
-    this.text = text
-    this.criteria = criteria ?? []
+    this.text = options.text ?? ""
+    this.criteria = options.criteria ?? []
     this.factsToSet = options.factsToSet ?? []
     this.labels = {
       lie:        options.labels?.lie         || false,
@@ -15,18 +32,28 @@ class DialogueNode {
     }
     this.in = []
     this.out = []
-    this.transfer = transfer ?? [{owner: "player", items: [""]}, {owner: "player", items: [""]}]
+
+    /* optional parameter: it informs the game what the tone of the message is, so it can adjust character sprites or other things accordingly */
+    this.tone = options.tone ?? "normal"
+
+    /* set transfer only if it's a transfer node */
+    if(this.type === "transfer")
+      this.transfer = options.transfer ?? [{owner: "player", items: [""]}, {owner: "player", items: [""]}]
+    else
+      this.transfer = null
 
     /* this contains a set of node IDs that are required to run through before this node is accepted */
     this.preconditions = new Set()
     if(Array.isArray(options.preconditions)) {
       options.preconditions.forEach(value => this.preconditions.add(value))
-    } 
+    }
+    
     /* the logical operation used, OR or AND are accepted */
     this.preconditionLogic =  options.preconditionLogic ?? "OR"
 
     /* editor-only features */
     this.stack = null
+    this.unfinished = false
 
     dialogueEditor.nodes.push(this)
     this.createHTML()
@@ -47,9 +74,11 @@ class DialogueNode {
     let widgetProperties =        El("div", "dialogue-node-widget list",                    [["title", "Open node properties"]])
     let widgetPrecondition =      El("div", "dialogue-node-widget precondition",            [["title", "Set preconditions"]])
     let widgetPreconditionLogic = El("div", "dialogue-node-widget precondition-logic or",   [["title", "Set logical operation for preconditions"]])
+    let widgetUnfinished =        El("div", "dialogue-node-widget unfinished",              [["title", "Mark as unfinished"]])
     let factCount =               El("div", "condition-count active")
     let filler =                  El("div", "filler")
     let content =                 El("div", "dialogue-node-content")
+    let toneIndicator =           El("div", "dialogue-node-tone-indicator")
     
     /* sockets */
     let wrapperOut =  El('div', "dialogue-node-socket-wrapper out")
@@ -64,7 +93,7 @@ class DialogueNode {
 
     /* append stuff */
     nodeTitle.append(nodeIcon)
-    header.append(widgetRemove, widgetProperties, widgetPrecondition, widgetPreconditionLogic, filler, nodeTitle)
+    header.append(widgetRemove, widgetProperties, widgetPrecondition, widgetPreconditionLogic, widgetUnfinished, filler, nodeTitle)
     node.append(header, content, factCount, wrapperOut, wrapperIn)
     wrapperOut.append(socketOut)
     wrapperIn.append(socketIn)
@@ -81,17 +110,21 @@ class DialogueNode {
     /* specific features per node type */
     this["createHTML" + this.type.capitalize()]()
 
-    // /* attach thumbnails to person fields */
-    // Array.from(this.element.querySelectorAll(".dialogue-node-speaker")).forEach(element => {
-    //   this.setPersonThumbnail(element, element.innerText)
-    // })
+    /* attach thumbnails to person fields */
+    if(dialogueEditor.options.useThumbnails) {
+      Array.from(this.element.querySelectorAll(".dialogue-node-speaker"))
+      .forEach(element => {
+        this.setPersonThumbnail(element, element.innerText)
+      })  
+    }
   }
-  setPersonThumbnail(element, person) {
+  setPersonThumbnail(element, person, isVariable) {
     let 
     thumbnail = new Image()
-    thumbnail.src = `assets/portraits/${person}.png`
     thumbnail.style.height = "32px"
     thumbnail.style.marginRight = "5px"
+
+    isVariable ? thumbnail.src = "assets/icons/iconEmptyCharacter.png" : thumbnail.src = `assets/portraits/${person}.png`
     element.prepend(thumbnail)
 
     /* dim if the field is assigned to empty character */
@@ -202,11 +235,15 @@ class DialogueNode {
   createHTMLTree() {
     let text = El('div', "dialogue-node-row dialogue-node-tree-row", [["title", "Text"]], "Select node tree.")
     text.dataset.datatype = "nodeTree"
-    text.dataset.editable = "true"
     this.nodeHTMLContent.append(text)
 
     if(this.tree)
       this.setNodeTree(text, this.tree)
+  }
+  createHTMLWait() {
+    let text = El('div', "dialogue-node-row dialogue-node-row", [["title", "How long to wait before processing the next node"]], "Wait for: 0")
+    text.dataset.datatype = "number"
+    this.nodeHTMLContent.append(text)
   }
   //#endregion create HTML
   addSetterFact(id, identifier = "fact_identifier", value = true) {
@@ -396,6 +433,20 @@ class DialogueNode {
     "pass",
     "aggression",
     "factSetter",
-    "tree"
+    "tree",
+    "wait"
+  ]
+  static tones = [
+    "normal",
+    "sarcastic",
+    "scared",
+    "aggressive",
+    "mocking",
+    "angry",
+    "upset",
+    "sad",
+    "happy",
+    "intrigued",
+    "suspicious",
   ]
 }

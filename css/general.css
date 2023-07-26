@@ -225,7 +225,7 @@ textarea {
 .context-menu {
   position: absolute;
   width: max-content;
-  padding: 10px 20px;
+  padding: 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -238,8 +238,10 @@ textarea {
 }
 
 .context-menu-option {
+  display: flex;
   position: relative;
-  padding: 5px 0;
+  padding: 5px;
+  border-radius: 5px;
 }
 
 .context-menu-option:hover {
@@ -247,14 +249,13 @@ textarea {
 }
 
 .context-menu-title {
-  padding: 0 0 10px;
+  padding: 5px;
   font-size: 16px;
+  color: var(--dark-7);
 }
 
 .context-menu-index {
-  position: absolute;
-  right: 0;
-  top: 0;
+  margin-left: 20px;
   height: 100%;
   width: max-content;
   display: flex;
@@ -456,4 +457,41 @@ button.generic:hover {
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+/* resizer */
+.element-resizer {
+  position: absolute;
+  z-index: 100;
+  background-clip: content-box;
+  transition: background-color 0.5s cubic-bezier(1, 0, 0, 1); 
+}
+.element-resizer:hover {
+  background-color: var(--color-node-connection);
+}
+.element-resizer.vertical {
+  top: 0;
+  width: 6px;
+  height: 100%;
+  padding: 0 2px;
+  cursor: ew-resize;
+}
+.element-resizer.horizontal {
+  left: -3px;
+  height: 6px;
+  width: 100%;
+  padding: 2px 0;
+  cursor: w-resize;
+}
+.element-resizer.right {
+  right: -3px;
+}
+.element-resizer.left {
+  left: -3px;
+}
+.element-resizer.top {
+  top: 0;
+}
+.element-resizer.bottom {
+  bottom: 0;
 }

@@ -21,6 +21,7 @@
 </head>
 <body>
   <div id="modal-container" class="hidden"></div>
+
   <div id="dialogue-editor" class="dialogue-editor hidden">
     <div id="dialogue-editor-box-selection" class="hidden"></div>
     <div id="dialogue-editor-navbar" class="dialogue-editor-navbar">
@@ -33,15 +34,32 @@
       <div style="display: flex; align-items: center;">
         <img id="toggle-sidebars-icon" src="assets/icons/iconToggleSidebars.png" title="Toggle sidebars [U]">
       </div>
-      <div id="save-mode-toggle" class="toggle-button">
+      <div id="editor-mode-toggle" class="toggle-button">
+        <div class="toggle-option active" data-option="edit"      title="Editor window.">
+          <div class="editor-mode-icon">
+            <img src="assets/icons/iconEditorModeEdit.png" alt="">
+          </div>
+        </div> 
+        <div class="toggle-option"        data-option="playtest"  title="Playtest window.">
+          <div class="editor-mode-icon">
+            <img src="assets/icons/iconEditorModePlaytest.png" alt="">
+          </div>
+        </div> 
+      </div>
+      <div id="review-button" class="inactive">
+        <div class="icon icon-20w icon-alert"></div>
+        Review
+      </div>
+      <!-- <div id="save-mode-toggle" class="toggle-button">
         <div class="toggle-option active" data-option="manual"    title="Each file is saved manually.">Manual</div> 
         <div class="toggle-option"        data-option="automatic" title="Each file is saved automatically while editing. Risky.">Auto</div> 
       </div>
       <div style="display: flex; align-items: center;">
         <img class="save-icon" src="assets/icons/iconSave.png" title="Saving mode">
-      </div>
+      </div> -->
     </div>
-    <div id="sidebar-left" class="sidebar left">
+    <div id="sidebar-left" class="sidebar left" data-resizeable="true" data-resizefrom="left">
+      <div class="element-resizer vertical right"></div>
       <div id="sidebar-left-search-wrapper">
         <div id="sidebar-left-search-icon" class="ui-graphic"></div>
         <input id="sidebar-left-search-input" type="text" name="" placeholder="Search for files">
@@ -66,9 +84,12 @@
         <div class="dialogue-editor-option" title="Hide unnecessary buttons for each node and push them closer together." data-option="compactView">      Compact view</div>
         <div class="dialogue-editor-option" title="Toggle the visual indication of node stacks."                          data-option="displayStacks">    Display node stacks</div>
         <div class="dialogue-editor-option" title="Automatically update node stacks when a node is added or removed."     data-option="autoUpdateStacks"> Auto-update stacks</div>
+        <div class="dialogue-editor-option" title="Show option to set tone for text-based nodes."                         data-option="showTone">         Show tone indicators</div>
+        <div class="dialogue-editor-option" title="Use thumbnails for characters."                                        data-option="useThumbnails">    Use thumbnails</div>
       </div>
     </div>
-    <div id="sidebar-right" class="sidebar right">
+    <div id="sidebar-right" class="sidebar right" data-resizeable="true" data-resizefrom="right">
+      <div class="element-resizer vertical left"></div>
        <div id="character-list-heading" class="sidebar-heading">
          <img id="sidebar-right-hide-arrow" class="small-arrow" src="assets/icons/iconSmallArrow.png">
         <div id="sidebar-right-characters-heading">Characters</div>
@@ -82,6 +103,61 @@
         <img src="assets/icons/iconPlus.png" alt="" class="icon-24">
         <div>Add character variable</div>
       </div>
+    </div>
+  </div>
+
+  <div id="dialogue-screen" class="hidden">
+    <div id="dialogue-screen-navbar">
+      <div id="return-to-dialogue-editor-button" onclick="ProgramManager.setWindow(dialogueEditor)">Return</div>
+    </div>
+    <div id="dialogue-screen-transport-panel">
+      <div class="transport-panel-button">
+        <img src="assets/icons/iconTransportPlay.png" alt="">
+      </div>
+      <div class="transport-panel-button">
+        <img src="assets/icons/iconTransportRestart.png" alt="">
+      </div>
+      <div class="transport-panel-button">
+        <img src="assets/icons/iconTransportStepBack.png" alt="">
+      </div>
+      <div class="transport-panel-button">
+        <img src="assets/icons/iconTransportOptions.png" alt="">
+      </div>
+    </div>
+    <div id="dialogue-screen-sidebar-left" class="sidebar left">
+      <div class="element-resizer vertical right"></div>
+      <div id="dialogue-screen-options-heading" class="sidebar-heading">
+        <div>Options</div>
+        <div class="filler"></div>
+      </div>
+      <div class="dialogue-editor-option" title="Deleting nodes requires confirmation." data-option="animateText">Animate text</div>
+    </div>
+    <div id="dialogue-screen-sidebar-right" class="sidebar right">
+      <div class="element-resizer vertical left"></div>
+    </div>
+    <div class="dialogue-screen-header"></div>
+    <div id="dialogue-screen-portrait-container-left" class="portrait-container left" data-resizeable="true" data-resizefrom="left">
+    </div>
+    <div id="dialogue-screen-portrait-container-right" class="portrait-container right" data-resizeable="true" data-resizefrom="right">
+    </div>
+    <div id="fact-switcher" class="draggable hidden">
+      <div class="header">
+        <h3 style="flex-grow: 1;">Fact switcher</h3>
+        <div class="icon-32 drag-widget" style="justify-self: flex-end;"></div>
+      </div>
+      <div class="fact-switcher-options">
+        <div class="fact-list-label">
+          <span class="tooltip" data-tooltip="Facts that are used throughout this dialogue" data-delay="0">Applicable: </span>
+        </div>
+        <div class="icon-medium icon-restart-conversation tooltip" data-tooltip="Restart conversation."></div>
+        <div class="icon-medium icon-reset-facts tooltip" data-tooltip="Reset facts."></div>
+      </div>
+      <div class="fact-list">
+      </div>
+    </div>
+    <div class="dialogue-container">
+      <div id="dialogue-content"></div>
+      <div id="dialogue-options" class="dialogue-options inactive"></div>
     </div>
   </div>
 
@@ -118,10 +194,12 @@
   <script src="js/utility/checkbox.js"></script>
   <script src="js/utility/bubbleToggle.js"></script>
 
+  <script src="js/programUI.js"></script>
+  <script src="js/programManager.js"></script>
+  <script src="js/programWindow.js"></script>
 
   <script src="js/collision.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/programWindow.js"></script>
   <script src="js/binds.js"></script>
   <script src="js/input.js"></script>
   <script src="js/mouse.js"></script>

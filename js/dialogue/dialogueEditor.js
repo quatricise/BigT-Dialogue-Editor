@@ -28,6 +28,9 @@ class DialogueEditor extends ProgramWindow {
     /* name of the last npc set inside a text node */
     this.lastNpc = Object.keys(data.person)[0]
 
+    /* position for the placement of the next dialogue node, optionally set by some actions */
+    this.nextNodePosition = null
+
     this.state = new State(
       "default",
       "connecting",
@@ -38,10 +41,10 @@ class DialogueEditor extends ProgramWindow {
       "panning",
       "dragging",
       "editing",
-      "loading",
       "selectingSpeaker",
       "selectingItem",
       "boxSelection",
+      "resizing",
     )
     this.selected = {
       connections: [],
@@ -54,15 +57,16 @@ class DialogueEditor extends ProgramWindow {
       autoUpdateStacks: false,
     }
     this.connectionData = {
-      outputSocketIndex: null,
-      /**
-      * @type HTMLDivElement
-      */
-      placeholderSocket: null,
+      /** @type Number */         outputSocketIndex: null,
+      /** @type HTMLDivElement */ placeholderSocket: null,
     }
     this.autoPan = {
       active: false,
       maxSpeed: 1,
+    }
+    this.resizeData = {
+      element: null,
+      resizeFrom: "left",
     }
     this.boxSelection = {
       active: false,
@@ -330,29 +334,37 @@ class DialogueEditor extends ProgramWindow {
     })
   }
   fetchDialogueData(filename) {
-    /* this is used to get the file, then store it into this.files, then open it */
+    /* this is used to get the file, then store it into this.files */
+    /* it also stores data, clears editor, opens the fetched file, which it all SHOULDN'T FUCKING DO, because it's stupid */
 
     this.storeDialogueData()
     this.clearEditor()
 
-    this.state.set('loading')
     this.dialogueName = filename
     let url = `dialogue/${this.folder}/${filename}.json`
 
     readJSONFile(url, (text) => {
-      let nodes = JSON.parse(text);
+      let nodes = JSON.parse(text)
+
       /* create nodes */
       nodes.forEach(node => {
         new DialogueNode(
           node.type, 
-          node.text, 
-          node.speaker, 
           new Vector(node.pos.x, node.pos.y), 
-          node.id, 
-          node.criteria,
-          {labels: node.labels, factsToSet: node.factsToSet, tree: node.tree, preconditions: node.preconditions, preconditionLogic: node.preconditionLogic},
-          node.transfer,
-          node.recipient
+          {
+            text:              node.text, 
+            speaker:           node.speaker, 
+            id:                node.id, 
+            criteria:          node.criteria,
+            labels:            node.labels, 
+            factsToSet:        node.factsToSet, 
+            tree:              node.tree, 
+            preconditions:     node.preconditions, 
+            preconditionLogic: node.preconditionLogic, 
+            tone:              node.tone,
+            transfer:          node.transfer,
+            recipient:         node.recipient
+          }
         )
       })
       /* create connections between nodes */
@@ -365,7 +377,6 @@ class DialogueEditor extends ProgramWindow {
       })
       /* reconstruct html */
       this.reconstructHTML()
-      this.state.set("default")
 
       /* create a tab for this file */
       this.createTabForFile(filename)
@@ -402,31 +413,61 @@ class DialogueEditor extends ProgramWindow {
       let inNodes = node.in.map(n => {return {index: n.index, to: n.from.id}})
       let outNodes = node.out.map(n => {return {index: n.index, to: n.to.id}})
 
-      exportData.push(
-        {
-          id: node.id,
-          pos: node.pos,
-          type: node.type,
-          speaker: node.speaker,
-          recipient: node.recipient,
-          transfer: node.transfer,
-          labels: node.labels,
-          text: node.text,
-          factsToSet: node.factsToSet,
-          criteria: node.criteria,
-          in: inNodes,
-          out: outNodes,
-          tree: node.tree,
-          preconditions: Array.from(node.preconditions),
-          preconditionLogic: node.preconditionLogic
+      /* we need to better filter what is getting through, so no node-specific properties */
+      let obj = {
+        id: node.id,
+        pos: node.pos,
+        type: node.type,
+        speaker: node.speaker,
+        labels: node.labels,
+        text: node.text,
+        in: inNodes,
+        out: outNodes,
+        tone: node.tone,
+        criteria: node.criteria,
+        preconditions: Array.from(node.preconditions),
+        preconditionLogic: node.preconditionLogic
+      }
+
+      /* modify the object based on the node type */
+      switch(node.type) {
+        case "responsePicker": {
+          delete obj.speaker
+          delete obj.labels
+          delete obj.tone
+          delete obj.text
+          break
         }
-      )
+        case "transfer": {
+          obj.transfer = node.transfer
+          delete obj.tone
+          break
+        }
+        case "whisper": {
+          obj.recipient = node.recipient
+          break
+        }
+        case "factSetter": {
+          obj.factsToSet = node.factsToSet
+          delete obj.tone
+          break
+        }
+        case "tree": {
+          obj.tree = node.tree
+          delete obj.tone
+          break
+        }
+      }
+
+      exportData.push(obj)
     })
     exportToJSONFile(exportData, this.dialogueName)
   }
   storeDialogueData() {
     /* this stores data to this.files, stored under a unified format called DialogueData */
     if(!this.dialogueName) return
+
+    console.log(this.dialogueName)
 
     let header = {
       name: this.dialogueName,
@@ -438,7 +479,7 @@ class DialogueEditor extends ProgramWindow {
     this.files.set(this.dialogueName, dialogueData)
   }
   clearEditor() {
-    /* this part is almost like a reset() but it doesn't call destroy() on the nodes */
+    /* this part is almost like reset() but it doesn't call destroy() on the nodes, it hides them only */
     this.nodes.forEach(node => {
       node.element.remove()
       node.element.classList.remove("active", "selected")
@@ -523,9 +564,19 @@ class DialogueEditor extends ProgramWindow {
     Q("#navbar-files").append(container)
     this.setTabAsActive(container)
   }
-  setTabAsActive(tabElement) {
+  setTabAsActive(/** @type HTMLDivElement */ tabElement) {
     Qa(".dialogue-node-file-tab").forEach(tab => tab.classList.remove("active"))
     tabElement.classList.add("active")
+
+    /* if tab is not in view, scroll it */
+    let parentRect = tabElement.parentElement.getBoundingClientRect()
+    let tabRect = tabElement.getBoundingClientRect()
+
+    if(tabRect.left < parentRect.left)
+      tabElement.parentElement.scrollLeft -= parentRect.left - tabRect.left
+    if(tabRect.left + tabRect.width > parentRect.left + parentRect.width) {
+      tabElement.parentElement.scrollLeft += tabRect.left + tabRect.width - parentRect.width - parentRect.left
+    }
   }
   pan(offset) {
     this.nodes.forEach(node => node.pos.add(offset))
@@ -545,7 +596,7 @@ class DialogueEditor extends ProgramWindow {
   hideFactSearch() {
 
   }
-  setPerson(person, role) {
+  setPerson(person, role, isVariable = false) {
     console.log("setting person: ", person)
     if(this.activeNode.type == "text" || this.activeNode.type == "whisper" || this.activeNode.type == "pass" || this.activeNode.type == "aggression") {
       this.activeNode[role] = person
@@ -557,7 +608,7 @@ class DialogueEditor extends ProgramWindow {
     }
     /* set HTML */
     this.highlighted.innerText = person
-    this.activeNode.setPersonThumbnail(this.highlighted, person)
+    this.activeNode.setPersonThumbnail(this.highlighted, person, isVariable)
 
     this.lastNpc = person
     this.npcSearchDelete()
@@ -814,6 +865,7 @@ class DialogueEditor extends ProgramWindow {
           /* auto-select the new node unless a response-picker is active */
           if(this.activeNode.type !== "responsePicker") {
             this.setActiveNode({target: node.element})
+            this.panNodeIntoView(this.activeNode)
           }
         }
 
@@ -1084,6 +1136,11 @@ class DialogueEditor extends ProgramWindow {
       this.npcSearchCreate("recipient")
     }
 
+    /* generic text search context menu */
+    if(target.closest(".dialogue-node *[data-datatype='nodeTree']")) {
+      console.log("tree")
+    }
+
     if(target.closest(".dialogue-node *[data-datatype='item']")) {
       if(this.itemSearch) {
         this.itemSearchDelete()
@@ -1188,8 +1245,9 @@ class DialogueEditor extends ProgramWindow {
       let svg = target.closest("svg")
       let node = this.nodes.find(node => node.id === +event.target.closest("svg").dataset.id)
       let index = +svg.dataset.index
+
+      /* add a node in between the two adjacent nodes if there is the insert widget in the DOM*/
       if(Q(".insert-node-widget")) {
-        /* add a node in between the two adjacent nodes */
         let newNode = this.createNode("text")
         let oldConn = node.out[index]
         node.deleteConnection(index)
@@ -1223,12 +1281,14 @@ class DialogueEditor extends ProgramWindow {
       
       if(target.closest(".search-popup-row[data-datatype='speaker']")) {
         let speaker = target.closest(".search-popup-row").dataset.speaker
-        this.setPerson(speaker, "speaker")
+        let isVariable = stringToBool(target.closest(".search-popup-row").dataset.isvariable)
+        this.setPerson(speaker, "speaker", isVariable)
       }
 
       if(target.closest(".search-popup-row[data-datatype='recipient']")) {
         let recipient = target.closest(".search-popup-row").dataset.speaker
-        this.setPerson(recipient, "recipient")
+        let isVariable = stringToBool(target.closest(".search-popup-row").dataset.isvariable)
+        this.setPerson(recipient, "recipient", isVariable)
       }
     }
 
@@ -1304,7 +1364,12 @@ class DialogueEditor extends ProgramWindow {
 
     if(target.closest(".dialogue-editor-option")) {
       let optionElement = target.closest(".dialogue-editor-option")
-      this["setOption" + optionElement.dataset.option.capitalize()]()
+      let optionName = optionElement.dataset.option
+      this["setOption" + optionName.capitalize()]()
+      if(this.options[optionName])
+        optionElement.classList.add("active")
+      else
+        optionElement.classList.remove("active")
     }
 
     if(target.closest(".context-menu-option")) {
@@ -1352,6 +1417,15 @@ class DialogueEditor extends ProgramWindow {
 
     if(target.closest(".properties-panel .dialogue-node-widget.remove")) {
       this.propertiesPanel.hide()
+    }
+
+    /* panel resizing */
+    if(target.closest(".element-resizer")) {
+      let resizeable = target.closest("[data-resizeable=true]")
+      let resizeFrom = resizeable.dataset.resizefrom
+      this.resizeData.resizeFrom = resizeFrom
+      this.resizeData.element = resizeable
+      this.state.set("resizing")
     }
 
     /* section-related things */
@@ -1469,6 +1543,17 @@ class DialogueEditor extends ProgramWindow {
     if(this.state.is("boxSelection")) {
       this.boxSelection.update()
     }
+    if(this.state.is("resizing")) {
+      let rect = this.resizeData.element.getBoundingClientRect()
+      if(this.resizeData.resizeFrom === "left")
+        this.resizeData.element.style.width = rect.width + mouse.clientMoved.x + "px"
+      if(this.resizeData.resizeFrom === "right")
+        this.resizeData.element.style.width = rect.width - mouse.clientMoved.x + "px"
+      if(this.resizeData.resizeFrom === "top")
+        this.resizeData.element.style.height = rect.height + mouse.clientMoved.y + "px"
+      if(this.resizeData.resizeFrom === "bottom")
+        this.resizeData.element.style.height = rect.height - mouse.clientMoved.y + "px"
+    }
 
     /* construct a plus that will allow for node insertion and also layout adjustment */
     if(event.target.closest("path.node-connection") && keys.shift) {
@@ -1512,14 +1597,17 @@ class DialogueEditor extends ProgramWindow {
 
       if(this.state.is("connecting") && target.closest(".dialogue-node")) {
         let node = this.getNodeAtMousePosition(event)
+        if(node === this.activeNode) return
         this.activeNode.createConnection(node, this.connectionData.outputSocketIndex)
         this.unsetActiveNode()
       }
+
       if(this.state.is("connecting") && target === this.element) {
         let node = this.createNode("text")
         this.activeNode.createConnection(node, this.connectionData.outputSocketIndex)
         this.setActiveNode({target: node.element})
       }
+
       if(this.state.is("creating") && target === this.element) {
         let node = this.createNode("text")
         this.setActiveNode({target: node.element})
@@ -1672,10 +1760,25 @@ class DialogueEditor extends ProgramWindow {
       })
     }
     else {
-      /* 
-      the sorting of nodes here should be done based on their flow, if they are CONNECTED, 
-      find the top node in the flow, and then go from there
-      */
+      /* the sorting of nodes here SHOULD be done based on their flow, IF they are connected, */
+      let areNodesConnected
+
+      /* find the top node in the flow, and then go from there */
+      let topNode = nodes.find(n => {
+        let inputNodes = n.in.map(conn => conn.from)
+        let areInputsPartOfNodeStack = false
+        inputNodes.forEach(n => {
+          if(nodes.findChild(n)) areInputsPartOfNodeStack = true
+        })
+        if(!areInputsPartOfNodeStack) return true
+      })
+
+      if(topNode) areNodesConnected = true
+
+      if(areNodesConnected) {
+        /* here sort nodes based on the flow, starting with the top node */ 
+      }
+
       nodes = nodes.sort((a, b) => a.pos.y - b.pos.y)
       let rects = nodes.map(node => node.element.getBoundingClientRect())
       
@@ -1698,6 +1801,7 @@ class DialogueEditor extends ProgramWindow {
       })
     }
 
+    /* this will change, now nodes should be able to be in multiple stacks */
     /* remove nodes from other stacks if they were in any */
     nodes.forEach(node => {
       let stack = node.stack
@@ -1852,7 +1956,7 @@ class DialogueEditor extends ProgramWindow {
   }
   renameCharacterVariable(oldName) {
     let newName = window.prompt("Rename variable:", oldName)
-    if(!newName) return
+    if(!newName || this.characterVariables.has(newName) || newName === oldName) return
 
     let data = this.characterVariables.get(oldName)
     this.characterVariables.delete(oldName)
@@ -1871,24 +1975,26 @@ class DialogueEditor extends ProgramWindow {
     if(this.contextMenu) 
       this.contextMenuDelete()
 
+    this.nextNodePosition = mouse.clientPosition.copy
+
     let menu =  El("div", "context-menu")
-    let title = El("div","context-menu-title", undefined, "Select node type")
+    let title = El("div","context-menu-title", undefined, "Create node")
     menu.append(title)
 
     for(let type of DialogueNode.types) {
       let option = El("div", "context-menu-option")
+      let filler = El("div", "filler")
+      let index = El("div", "context-menu-index", undefined, DialogueNode.types.indexOf(type) + 1)
       option.innerText = type.replaceAll("-", " ").splitCamelCase().capitalize()
       option.dataset.type = type
       option.dataset.isplayer = false
-      
-      let index = El("div", "context-menu-index")
-      index.innerText = DialogueNode.types.indexOf(type) + 1
 
-      option.append(index)
+      option.append(filler, index)
       menu.append(option)
     }
     menu.style.left = (mouse.clientPosition.x + 5) + "px"
     menu.style.top =  (mouse.clientPosition.y + 5) + "px"
+    menu.style.minWidth = "max-content"
     
     this.element.append(menu)
     this.contextMenu = menu
@@ -1900,26 +2006,59 @@ class DialogueEditor extends ProgramWindow {
     this.contextMenu.remove()
     this.contextMenu = null
   }
+  textSearchCreate(/** @type Array<String> */ data) {
+    this.searchDelete()
+    let container = El("div", "search-popup")
+    let itemList =  El("div", "search-popup-item-list")
+    let input =     El("input", "search-popup-input", [["type", "text"]])
+
+    const createField = (value) => {
+      let row =   El("div", "search-popup-row", undefined, undefined, [["datatype", role],["speaker", value]])
+      let name =  El("div", "search-popup-name", undefined, value)
+
+      row.append(img, name)
+      itemList.append(row)
+    }
+
+    for(let value of data) {
+      createField(value)
+    }
+
+    container.style.left =  (mouse.clientPosition.x + 5) + "px"
+    container.style.top =   (mouse.clientPosition.y + 5) + "px"
+
+    container.append(input, itemList)
+    this.element.append(container)
+    
+    this.search = container
+    this.searchInput = input
+    setTimeout(() => this.fitInViewport(this.npcSearch), 0)
+  }
+  textSearchDelete() {
+    this.search?.remove()
+  }
   npcSearchCreate(role) {
     this.npcSearchDelete()
     let popup =         El("div", "search-popup")
     let itemContainer = El("div", "search-popup-item-list")
     let input =         El("input", "search-popup-input", [["type", "text"]])
 
-    const createField = (speaker) => {
+    const createField = (speaker, isVariable = false) => {
       let row =   El("div", "search-popup-row", undefined, undefined, [["datatype", role],["speaker", speaker]])
       let name =  El("div", "search-popup-name", undefined, speaker)
 
-      let 
-      img = new Image()
-      img.src = speaker.includes("variable") ? "assets/icons/iconSpeaker.png" : "assets/portraits/" + speaker + ".png"
+      let img = new Image()
+      isVariable ? img.src = "assets/icons/iconEmptyCharacter.png" : img.src = "assets/portraits/" + speaker + ".png"
 
+      row.dataset.isvariable = boolToString(isVariable)
       row.append(img, name)
       itemContainer.append(row)
     }
 
     for(let prop in data.person) 
       createField(prop)
+    for(let variable of this.characterVariables)
+      createField(variable[1].name, true)
 
     popup.append(input, itemContainer)
     popup.style.left = (mouse.clientPosition.x + 5) + "px"
@@ -2001,13 +2140,18 @@ class DialogueEditor extends ProgramWindow {
     this.connectionData.placeholderSocket.style.top =  mouse.clientPosition.y + "px"
   }
   createNode(type) {
+    /* choose position and then reset the optional property */
+    let position = this.nextNodePosition ?? mouse.clientPosition
+    this.nextNodePosition = null
+
+    let options = {
+      speaker: this.lastNpc,
+    }
+    if(type.includesAny("text", "whisper")) options.text = "Lorem Ipsum"
     let node = new DialogueNode(
       type, 
-      "Lorem Ipsum",
-      this.lastNpc, 
-      mouse.clientPosition, 
-      undefined, 
-      undefined, 
+      position,
+      options
     )
 
     this.contextMenuDelete()
@@ -2120,12 +2264,28 @@ class DialogueEditor extends ProgramWindow {
   panNodeIntoView(node) {
     let rect = node.element.getBoundingClientRect()
     let offset = new Vector()
-    let inset = 240
+    let inset = 220
 
-    if(rect.top < 0 + inset)                offset.y = -rect.top + inset
-    if(rect.left < 0 + inset)               offset.x = -rect.left + inset
-    if(rect.top + rect.height > ch - inset) offset.y += ch - (rect.top + rect.height) - inset
-    if(rect.left + rect.width > cw - inset) offset.x += cw - (rect.left + rect.width) - inset
+    let bounds = new BoundingBox(0, 0, cw, ch)
+
+    if(this.uiVisible) {
+      inset = 40
+      let leftSidebarRect =   Q("#sidebar-left").getBoundingClientRect()
+      let rightSidebarRect =  Q("#sidebar-right").getBoundingClientRect()
+      let navbarRect =        Q("#dialogue-editor-navbar").getBoundingClientRect()
+      bounds.x = leftSidebarRect.width
+      bounds.w = cw - leftSidebarRect.width - rightSidebarRect.width
+      bounds.y = navbarRect.height
+    }
+    if(Q(".properties-panel:not(.hidden)")) {
+      let propertiesRect = Q(".properties-panel").getBoundingClientRect()
+      bounds.h -= propertiesRect.height
+    }
+
+    if(rect.top  < bounds.y + inset)                offset.y =  bounds.y - rect.top + inset
+    if(rect.left < bounds.x + inset)                offset.x =  bounds.x - rect.left + inset
+    if(rect.top + rect.height > bounds.h - inset)   offset.y += bounds.h - (rect.top + rect.height) - inset
+    if(rect.left + rect.width > bounds.w - inset)   offset.x += bounds.w - (rect.left + rect.width) - inset
 
     this.nodes.forEach(node => node.pos.add(offset))
     this.updateHTML()
@@ -2167,16 +2327,25 @@ class DialogueEditor extends ProgramWindow {
   }
   duplicateNode(node) {
     if(!node) return
+
     let newNode = new DialogueNode(
-      _.cloneDeep(node.type),
-      _.cloneDeep(node.text),
-      _.cloneDeep(node.speaker),
-      node.pos.clone().add(new Vector(0, 25)),
-      undefined,
-      _.cloneDeep(node.facts),
-      {labels: _.cloneDeep(node.labels)},
-      _.cloneDeep(node.transfer)
+      node.type,
+      node.pos.copy.add(new Vector(0, 25)),
+      {
+        speaker:           _.cloneDeep(node.speaker),
+        recipient:         _.cloneDeep(node.recipient),
+        text:              _.cloneDeep(node.text),
+        criteria:          _.cloneDeep(node.criteria),
+        factsToSet:        _.cloneDeep(node.factsToSet),
+        tree:              _.cloneDeep(node.tree),
+        preconditions:     Array.from(node.preconditions),
+        preconditionLogic: _.cloneDeep(node.preconditionLogic),
+        tone:              _.cloneDeep(node.tone),
+        labels:            _.cloneDeep(node.labels),
+        transfer:          _.cloneDeep(node.transfer)
+      }
     )
+
     this.setActiveNode({target: newNode.element})
     
     let section = null

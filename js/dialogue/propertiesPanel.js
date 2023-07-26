@@ -81,7 +81,6 @@ class PropertiesPanel {
     let filler = El("div", "filler")
     
     let optionalElements = []
-    console.log(requirement)
     switch(requirement.type) {
       case "condition": {
         optionalElements = [

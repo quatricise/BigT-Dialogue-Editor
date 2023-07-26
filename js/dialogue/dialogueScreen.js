@@ -3,10 +3,9 @@ class DialogueScreen extends ProgramWindow {
     super("DialogueScreen")
     this.element = Q("#dialogue-screen")
     this.optionsElement = Q("#dialogue-options")
-    this.factSwitcher = Q("#fact-switcher")
     this.dialogueContent = Q('#dialogue-content')
+    this.factSwitcher = Q("#fact-switcher")
     this.factList = this.factSwitcher.querySelector(".fact-list")
-    this.graphics = new PIXI.Graphics()
     this.state = new State(
       "default",
       "dragging",
@@ -14,46 +13,25 @@ class DialogueScreen extends ProgramWindow {
     this.canFastForwardBubble = true
     this.dragged = null
     this.JSONData = null
+
+    /* this will replace the JSONData property */
+    this.dialogueData = /** @type DialogueData */ null
     this.timeouts = []
-    this.windowType = "overlay"
+
+    /* this initializes some properties */
     this.reset()
   }
   show() {
     if(this.visible) return
 
-    AudioManager.dimMusic(0.5)
-
     this.visible = true
-    this.reset()
     this.element.classList.remove('hidden')
-    this.element.style.backgroundColor = "hsla(240, 2%, 8%, 0.0)"
-    this.element.animate([
-      {filter: "opacity(0) saturate(0)", backgroundColor: "hsla(240, 2%, 8%, 0.0)"},
-      {filter: "opacity(1) saturate(1)", backgroundColor: "hsla(240, 2%, 8%, 0.5)"},
-    ], {
-      duration: 700,
-      iterations: 1,
-      easing: "cubic-bezier(0.65, 0.0, 0.35, 1.0)",
-    })
-    .onfinish = () => this.element.style.backgroundColor = "hsla(240, 2%, 8%, 0.5)"
   }
   hide() {
     if(!this.visible) return
 
     this.visible = false
-    this.element.animate([
-      {filter: "opacity(1) saturate(1)", backgroundColor: "hsla(240, 2%, 8%, 0.5)"},
-      {filter: "opacity(0) saturate(0)", backgroundColor: "hsla(240, 2%, 8%, 0.0)"},
-    ], {
-      duration: 1000,
-      easing: "cubic-bezier(0.65, 0.0, 0.35, 1.0)"
-    })
-    .onfinish = () => {
-      this.element.classList.add('hidden')
-      this.element.style.backgroundColor = ""
-      this.reset()
-    }
-    AudioManager.restoreMusic()
+    this.element.classList.add('hidden')
   }
   reset() {
     this.dialogueName = null
@@ -147,7 +125,7 @@ class DialogueScreen extends ProgramWindow {
   load(filename) {
     this.dialogueName = filename
     this.reset()
-    readJSONFile("data/dialogue/" + filename + ".json", (text) => {
+    readJSONFile("dialogue/saladin/" + filename + ".json", (text) => {
       this.JSONData = text
       this.start()
     })
@@ -293,17 +271,23 @@ class DialogueScreen extends ProgramWindow {
     this.timeouts = []
   }
   async createBubble(speaker, text) {
+    /* parse the text into blocks based on regular/italic/bold/underscore sections */
+    let slashes = text.match(/\//g)
+    let asterisks = text.match(/\*/g)
+    let underscores = text.match(/_/g)
+    
     /* create html elements for the bubble */
     let block =       El("div", "dialogue-block")
-    let bubble =      El("div", "chat-bubble ui-button-minimal-alt-filled")
+    let bubble =      El("div", "chat-bubble")
     let bubbleArrow = El("div", "chat-bubble-arrow")
     let bubbleText =  El("span", "chat-bubble-text")
+
     this.dialogueContent.append(block)
 
     /* remaining letters for the current dialogue bubble */
     this.remainingLetters = text.split("")
 
-    /* keep calling this function until there are no remaining letters to animate */
+    /* keep calling this function until there are no remaining letters */
     const nextLetter = (prependWithSpace = false) => {
       let letter = this.remainingLetters.shift()
       let prependNextLetterWithSpace
@@ -335,7 +319,6 @@ class DialogueScreen extends ProgramWindow {
 
       let timeout = setTimeout(() => nextLetter(prependNextLetterWithSpace), delay)
       this.timeouts.push(timeout)
-      AudioManager.playSFX("dialogueLetter" + Random.int(1, 3), Random.decimal(0.4, 0.5, 1))
     }
 
     let bubbleHeight = await this.getBubbleHeight(text, block)
@@ -409,12 +392,6 @@ class DialogueScreen extends ProgramWindow {
 
     let timeout = setTimeout(() => this.getNextNode(), 400)
     this.timeouts.push(timeout)
-
-    AudioManager.playSFX("buttonNoAction", 0.3)
-    await waitFor(70)
-    AudioManager.playSFX("buttonNoAction", 0.2)
-    await waitFor(70)
-    AudioManager.playSFX("buttonNoAction", 0.15)
   }
   filterNodes(nodes) {
     let filteredNodes = []
@@ -489,8 +466,6 @@ class DialogueScreen extends ProgramWindow {
     this.scrollDown()
 
     this.generateWaitingBlock()
-
-    AudioManager.playSFX("dialogueOptionsShow")
   }
   clearOptions() {
     let options = Qa('#dialogue-options .option')
@@ -501,8 +476,6 @@ class DialogueScreen extends ProgramWindow {
     this.optionsElement.classList.add("inactive")
 
     this.destroyWaitingBlock()
-    AudioManager.playSFX("dialogueOptionsHide")
-
     this.dialogueContent.style.justifyContent = ""
   }
   generateWaitingBlock() {
@@ -543,38 +516,18 @@ class DialogueScreen extends ProgramWindow {
     if(this.isDialogueFinished) return
 
     this.isDialogueFinished = true
-    AudioManager.playSFX("speakerLeaveDialogue")
     this.generateDialogueEndBlock(endMessage)
     Qa(".chat-portrait-big").forEach(portrait => portrait.style.filter = DialogueScreen.desatFilter)
   }
   generateDialogueEndBlock(endMessage) {
-    let block = El("div", "dialogue-end-block ui-graphic")
+    let block = El("div", "dialogue-end-block")
     let text = El("div", "dialogue-block-informatory-text-bubble")
 
-    text.innerText = endMessage ?? "All participants left, you can close the window."
+    text.innerText = endMessage ?? "Dialogue ended."
     block.append(text)
     Q('#dialogue-content').append(block)
     this.scrollDown()
-
-    let option = El("div", "option leave-call-option", undefined, "Leave call")
-    option.dataset.playsfx =      ""
-    option.dataset.sounds =       "buttonHover buttonClick"
-    option.dataset.playonevents = "mouseover mousedown"
-
-    /* this is a terrible hack so the intro quest can continue */
-    option.onclick = () => Q("#leave-call-button").click()
-
-    this.optionsElement.append(option)
   }
-  //#region fact switcher
-  setupFactSwitcher() {
-    /* create an index of facts that have been altered for the sake of dialogue testing */
-    this.alteredFacts = {} 
-  }
-  switchFact(fact) {
-
-  }
-  //#endregion
   static hiddenSpeakers = [
     "dummyCaptain",
     "aiAssistant",
