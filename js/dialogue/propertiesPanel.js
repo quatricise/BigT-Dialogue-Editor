@@ -126,7 +126,7 @@ class PropertiesPanel {
     })
     this.elements.criteriaHeader.innerText = `Criteria [ ${this.programWindow.activeNode.criteria.length} ]`
     this.programWindow.reconstructHTML()
-    this.programWindow.reflowNodeStack()
+    this.programWindow.reflowNodeStacks()
   }
   //#endregion HTML layer
   //#region data manipulation

@@ -34,9 +34,9 @@ class DialogueDataHeader {
         case "stacks": {
           obj.stacks = []
           header.stacks.forEach(stack => {
-            let s = []
-            stack.forEach(node => s.push(node.id))
-            obj.stacks.push(s)
+            let ids = []
+            stack.nodes.forEach(node => ids.push(node.id))
+            obj.stacks.push(ids)
           })
           console.log(obj.stacks)
           break
@@ -73,6 +73,11 @@ class DialogueDataHeader {
         }
         case "stacks": {
           header.stacks = new Set()
+          obj.stacks.forEach(stackPlain => {
+            let nodes = stackPlain.map(nodeId => dialogueEditor.nodes.find(node => node.id === nodeId))
+            let stack = new DialogueNodeStack(nodes, stackPlain.type)
+            header.stacks.add(stack)
+          })
           break
         }
         case "characterVariables": {

@@ -4,13 +4,15 @@ class DialogueEditor extends ProgramWindow {
     this.dialogueName = null
     this.dialogueDescription = "Dialogue description"
     this.sections = new Set()
-    this.stacks = new Set()
+    this.stacks = /** @type Set<DialogueNodeStack> */ new Set()
     this.nodes = []
     this.folder = null
     this.activeNode = null
     this.editedData = {}
     this.history = new HistoryMachine()
     this.style = {connectionWidth: 12}
+
+    /* would be used for zooming, so far zoom is achieved by the default page zoom */
     this.scale = 1
     this.uiVisible = true
 
@@ -55,6 +57,8 @@ class DialogueEditor extends ProgramWindow {
       safeMode: false,
       displayStacks: false,
       autoUpdateStacks: false,
+      useThumbnails: false,
+      showTone: false,
     }
     this.connectionData = {
       /** @type Number */         outputSocketIndex: null,
@@ -715,7 +719,7 @@ class DialogueEditor extends ProgramWindow {
       }
     }
 
-    this.reflowNodeStack()
+    this.reflowNodeStacks()
 
     this.textarea.style.border = ""
     this.state.set("default")
@@ -1413,11 +1417,15 @@ class DialogueEditor extends ProgramWindow {
       let title = target.closest(".dialogue-editor-section-title")
       let section = Array.from(this.sections).find(s => s.elements.title === title)
       if(keys.ctrl) {
-        section.setName( window.prompt("Enter new name", title.innerText) ?? title.innerText )
+        let name = window.prompt("Enter new name", title.innerText)
+        if(name) section.setName(name)
       }
       else {
         /* keep other nodes selected if holding shift */
-        if(!keys.shift) this.deselectAll()
+        if(!keys.shift) {
+          this.deselectAll()
+          this.unsetActiveNode()
+        }
 
         section.nodes.forEach(node => this.selectNode(node))
         this.state.set("dragging")
@@ -1474,39 +1482,45 @@ class DialogueEditor extends ProgramWindow {
 
       /* break up stacks, if any nodes gets too far from them */
       nodes.forEach(node => {
-        if(!node.stack) return
-        let nodes = Array.from(node.stack)
-        let index = nodes.indexOf(node)
-        let [previous, next] = [nodes[index - 1], nodes[index + 1]]
-        
-        /* calculate how far the nodes have moved from each other, the stack breaks when they get too far apart */
-        let maxDistance = 80
-        const getSocketPosition = (node, socketType) => {
-          let socket = node.element.querySelector(`.dialogue-node-socket.${socketType}`)
-          let rect = socket.getBoundingClientRect()
-          let pos = new Vector(rect.left, rect.top)
-          return pos
-        }
-        if(previous) {
-          let pos1 = getSocketPosition(previous, "out")
-          let pos2 = getSocketPosition(node, "in")
-          let distance = pos1.distance(pos2)
+        if(node.stacks.size === 0) return
 
-          if(distance > maxDistance) {
-            this.deleteStack(node.stack)
-            return
-          }
-        }
-        if(next) {
-          let pos1 = getSocketPosition(next, "in")
-          let pos2 = getSocketPosition(node, "out")
-          let distance = pos1.distance(pos2)
+        node.stacks.forEach(stack => {
+          let nodes = Array.from(stack.nodes)
+          let index = nodes.indexOf(node)
+          let [previous, next] = [nodes[index - 1], nodes[index + 1]]
 
-          if(distance > maxDistance) {
-            this.deleteStack(node.stack)
-            return
+          /* calculate how far the nodes have moved from each other, the stack breaks when they get too far apart */
+          let maxDistance = 80
+          const getSocketPosition = (node, socketType) => {
+            let socket = node.element.querySelector(`.dialogue-node-socket.${socketType}`)
+            let rect = socket.getBoundingClientRect()
+            let pos = new Vector(rect.left, rect.top)
+            return pos
           }
-        }
+
+          if(previous) {
+            let pos1 = getSocketPosition(previous, "out")
+            let pos2 = getSocketPosition(node, "in")
+            let distance = pos1.distance(pos2)
+
+            if(distance > maxDistance) {
+              console.log("f")
+              this.deleteStack(stack)
+              return
+            }
+          }
+          if(next) {
+            let pos1 = getSocketPosition(next, "in")
+            let pos2 = getSocketPosition(node, "out")
+            let distance = pos1.distance(pos2)
+
+            if(distance > maxDistance) {
+              console.log("f")
+              this.deleteStack(stack)
+              return
+            }
+          }
+        })
       })
     }
     if(this.state.is("panning")) {
@@ -1671,7 +1685,7 @@ class DialogueEditor extends ProgramWindow {
     this.connectionData.placeholderSocket.classList.add("hidden")
     this.propertiesPanel.toggleEditability()
     this.reconstructHTML()
-    this.reflowNodeStack()
+    this.reflowNodeStacks()
   }
   handleWheel(event) {
     if(event.target.closest(".properties-panel")) return
@@ -1716,13 +1730,13 @@ class DialogueEditor extends ProgramWindow {
     this.nodes.forEach(node => node.pos.y *= avgHeightDifference)
     this.reconstructHTML()
   }
-  setOptionTidyUp(forceDirection = null, nodes = this.selected.nodes) {
+  setOptionTidyUp(forcedDirection = null, nodes = this.selected.nodes) {
     const spacing = 20
     const bounds = this.getStackBounds(nodes)
 
     let isHorizontal = this.isStackHorizontal(bounds)
-    if(forceDirection == "vertical") isHorizontal = false
-    if(forceDirection == "horizontal") isHorizontal = true
+    if(forcedDirection == "vertical") isHorizontal = false
+    if(forcedDirection == "horizontal") isHorizontal = true
 
     if(isHorizontal) {
       nodes = nodes.sort((a, b) => a.pos.x - b.pos.x)
@@ -1782,15 +1796,8 @@ class DialogueEditor extends ProgramWindow {
       })
     }
 
-    /* this will change, now nodes should be able to be in multiple stacks */
-    /* remove nodes from other stacks if they were in any */
-    nodes.forEach(node => {
-      let stack = node.stack
-      if(stack) {
-        stack.delete(node)
-        if(stack.size <= 1)
-          this.deleteStack(stack)
-      }
+    this.stacks.forEach(stack => {
+      stack.deleteNodes(...nodes)
     })
 
     /* add nodes to a stack */
@@ -1818,29 +1825,29 @@ class DialogueEditor extends ProgramWindow {
     /* this is mostly a dev option or debugging option */
     this.options.displayStacks = !this.options.displayStacks
   }
+  setOptionShowTone() {
+    this.options.showTone = !this.options.showTone
+  }
+  setOptionUseThumbnails() {
+    this.options.useThumbnails = !this.options.useThumbnails
+  }
   //#endregion
   createStack(...inputNodes) {
-    let bounds = this.getStackBounds(inputNodes)
-    let axis = this.isStackHorizontal(bounds) ? "x" : "y"
+    let bounds =       this.getStackBounds(inputNodes)
+    let isHorizontal = this.isStackHorizontal(bounds)
+    let axis = isHorizontal ? "x" : "y"
     let nodes = inputNodes.sort((a, b) => a.pos[axis] - b.pos[axis])
-
-    let stack = new Set()
-    nodes.forEach(node => {
-      stack.add(node)
-      node.stack = stack
-    })
+    let stackType = isHorizontal ? "horizontal" : "vertical"
+    let stack = new DialogueNodeStack(nodes, stackType)
     this.stacks.add(stack)
     console.log("create stack")
   }
   deleteStack(stack) {
-    this.nodes.forEach(n => {
-      if(n.stack === stack)
-        delete n.stack
-    })
+    stack.destroy()
     this.stacks.delete(stack)
     console.log("delete stack")
   }
-  getStackBounds(nodes) {
+  getStackBounds(/** @type Array<DialogueNode> */ nodes) {
     let top =     Math.min(...nodes.map(node => node.pos.y))
     let bottom =  Math.max(...nodes.map(node => node.pos.y))
     let left =    Math.min(...nodes.map(node => node.pos.x))
@@ -1851,12 +1858,15 @@ class DialogueEditor extends ProgramWindow {
   isStackHorizontal(bounds) {
     return (Math.abs(bounds.bottom - bounds.top) / Math.abs(bounds.left - bounds.right)) < 1
   }
-  reflowNodeStack() {
-    /* reflow node stacks */
-    if(this.activeNode?.stack) {
-      let nodes = Array.from(this.activeNode.stack)
+  reflowNodeStacks() {
+    if(!this.activeNode) return
+
+    /* it's very important NOT to iterate on the set, because setOptionTidyUp actually creates a new stack and that one is added into the forEach iteration, so it forces an infinite loop */
+    let stacks = Array.from(this.activeNode.stacks)
+    stacks.forEach(stack => {
+      let nodes = Array.from(stack.nodes)
       this.setOptionTidyUp(null, nodes)
-    }
+    })
   }
   createCharacterVariable() {
     let variableName = "variable_" + this.characterVariables.size

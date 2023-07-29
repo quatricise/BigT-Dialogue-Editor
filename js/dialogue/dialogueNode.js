@@ -52,7 +52,7 @@ class DialogueNode {
     this.preconditionLogic =  options.preconditionLogic ?? "OR"
 
     /* editor-only features */
-    this.stack = null
+    this.stacks = new Set() 
     this.unfinished = false
 
     dialogueEditor.nodes.push(this)
@@ -448,11 +448,7 @@ class DialogueNode {
     dialogueEditor.sections.forEach(section => section.nodes.delete(this))
 
     /* remove this node from stacks if they contain it */
-    if(this.stack) {
-      this.stack.delete(this)
-      if(this.stack.size <= 1)
-        dialogueEditor.deleteStack(this.stack)
-    }
+    this.stacks.forEach(s => s.deleteNodes(this))
   }
   static types = [
     "text",
