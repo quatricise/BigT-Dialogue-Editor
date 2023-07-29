@@ -495,3 +495,20 @@ button.generic:hover {
 .element-resizer.bottom {
   bottom: 0;
 }
+
+.small-dot {
+  border-radius: 1000px;
+  background-color: white;
+}
+.small-dot.w12 {
+  width:  12px;
+  height: 12px;
+}
+.small-dot.w8 {
+  width:  8px;
+  height: 8px;
+}
+.small-dot.w6 {
+  width:  6px;
+  height: 6px;
+}

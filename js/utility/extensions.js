@@ -41,6 +41,15 @@ Array.prototype.remove = function(...children) {
 Array.prototype.findChild = function(child) {
   return this.find(obj => obj === child)
 }
+Array.prototype.has = function(item) {
+  return this.find(obj => obj === item)
+}
+Array.prototype.after = function(item) {
+  return this[this.indexOf(item) + 1] ?? null
+}
+Array.prototype.before = function(item) {
+  return this[this.indexOf(item) - 1] ?? null
+}
 Array.prototype.last = function() {
   return this[this.length - 1]
 }
@@ -48,6 +57,10 @@ Array.prototype.removeAt = function(index) {
   return this.splice(index, 1)
 }
 Array.prototype.empty = function() {
+  while(this.length)
+    this.pop()
+}
+Array.prototype.clear = function() {
   while(this.length)
     this.pop()
 }

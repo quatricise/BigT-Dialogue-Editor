@@ -14,7 +14,11 @@ class DialogueEditor extends ProgramWindow {
 
     /* would be used for zooming, so far zoom is achieved by the default page zoom */
     this.scale = 1
-    this.uiVisible = true
+
+    /* if sidebars are visible */
+    this.sidebarsVisible = true
+
+    this.isFileSaved = true
 
     /* this maps filenames to DialogueData instances, which are essentially locally stored files */
     this.files = new Map()
@@ -198,10 +202,17 @@ class DialogueEditor extends ProgramWindow {
 
     Server.getDialogueData(folder)
     .then(data => {
+      /* first close folder if there is one */
+      this.closeFolder()
+
       this.folder = folder
-      Q("#sidebar-left-files").innerHTML = ""
+
+      /* set some HTML */
       Q("#sidebar-left-folder-heading").innerText = folder
       Q("#sidebar-left-folder-heading").classList.remove("faded-text")
+      Q("#close-folder-button").classList.remove("disabled")
+
+      /* load data */
       data.files.forEach(file => {
         let filename = file.replace(".json", "")
         this.createSidebarFileRow(filename)
@@ -216,6 +227,31 @@ class DialogueEditor extends ProgramWindow {
     })
     .catch(e => console.log(e))
   }
+  closeFolder() {
+    if(!this.folder) return
+
+    let unsavedFilesExist = false
+    this.files.forEach(file => {
+      if(file.header.isFileSaved === false) unsavedFilesExist = true
+    })
+    if(
+      (unsavedFilesExist && window.confirm("There are unsaved files, really close folder?")) 
+      || !unsavedFilesExist
+    ) {
+      this.folder = null
+      this.files.clear()
+      this.characterVariables.clear()
+
+      this.reset()
+      this.clearCharacterList()
+
+      Q("#sidebar-left-files").innerHTML = ""
+      Q("#navbar-files").innerHTML = ""
+      Q("#sidebar-left-folder-heading").innerText = "Folder"
+      Q("#sidebar-left-folder-heading").classList.add("faded-text")
+      Q("#close-folder-button").classList.add("disabled")
+    }
+  }
   createSidebarFileRow(filename) {
     let container =     El("div", "sidebar-file-row", [["title", "Open file"]])
     let name =          El("div", "sidebar-file-row-name", undefined, filename)
@@ -227,9 +263,11 @@ class DialogueEditor extends ProgramWindow {
     container.append(icon, name, deleteButton)
     Q("#sidebar-left-files").append(container)
   }
-  createCharacterList() {
-    /* clear the list first */
+  clearCharacterList() {
     Qa(".sidebar-character-row").forEach(el => el.remove())
+  }
+  createCharacterList() {
+    this.clearCharacterList()
 
     let characters = new Set()
     this.nodes.forEach(node => {
@@ -281,17 +319,16 @@ class DialogueEditor extends ProgramWindow {
       filename = "dialogue_" + attempts
     }
     this.dialogueName = filename
+
+    /* send data to the server and make an actual json file */
+    this.storeDialogueData()
+    this.saveFile()
     
     /* create a file row in the left sidebar */
     this.createSidebarFileRow(filename)
 
     /* create a tab for this file */
     this.createTabForFile(filename)
-
-    /* send data to the server and make an actual json file */
-    this.storeDialogueData()
-    this.saveFile()
-    console.log(this.dialogueName)
   }
   deleteFile(name) {
     if(!window.confirm(`Really delete file: ${name}?`)) return
@@ -417,7 +454,35 @@ class DialogueEditor extends ProgramWindow {
 
     /* send data to server */
     Server.saveFile(this.folder, this.dialogueName, exportData)
-    .finally(isSuccess => console.log(`Saving was ${isSuccess ? "" : "un"}successful.`))
+    .then(isSuccess => {
+      if(isSuccess) this.markFileAsSaved()
+      console.log(`Saving file '${this.dialogueName}' was ${isSuccess ? "" : "un"}successful.`)
+      this.storeDialogueData()
+    })
+  }
+  markFileAsUnsaved() {
+    if(!this.dialogueName || !this.folder) return
+
+    this.files.get(this.dialogueName).header.isFileSaved = false
+    this.isFileSaved = false
+    let tab = Q(`.dialogue-node-file-tab[data-filename='${this.dialogueName}']`)
+    let row = Q(`.sidebar-file-row[data-filename='${this.dialogueName}']`)
+    let dot = tab.querySelector(".small-dot")
+    if(dot) return
+
+    dot = El("div", "small-dot w6")
+    dot.style.marginRight = "5px"
+    let clonedDot = dot.cloneNode(true)
+    tab.querySelector(".dialogue-node-file-close-button").before(dot)
+    row.querySelector(".dialogue-node-file-close-button").before(clonedDot)
+  }
+  markFileAsSaved() {
+    if(!this.dialogueName || !this.folder) return
+
+    this.files.get(this.dialogueName).header.isFileSaved = true
+    this.isFileSaved = true
+    let affectedElements = Qa(`[data-filename='${this.dialogueName}']`)
+    affectedElements.forEach(el => el.querySelector(".small-dot")?.remove())
   }
   constructDialogueData(rawData) {
     /* actually, this function should CONSTRUCT the data, but not LOAD it */
@@ -498,7 +563,7 @@ class DialogueEditor extends ProgramWindow {
     if(!this.dialogueName) return
 
     /* copy props from this class to the header */
-    let header = DialogueDataHeader.empty()
+    let header = new DialogueDataHeader()
     for(let key in header) {
       header[key] = this[key]
     }
@@ -510,15 +575,15 @@ class DialogueEditor extends ProgramWindow {
   hideSidebars() {
     Q("#sidebar-left").classList.add("hidden")
     Q("#sidebar-right").classList.add("hidden")
-    this.uiVisible = false
+    this.sidebarsVisible = false
   }
   showSidebars() {
     Q("#sidebar-left").classList.remove("hidden")
     Q("#sidebar-right").classList.remove("hidden")
-    this.uiVisible = true
+    this.sidebarsVisible = true
   }
   toggleSidebars() {
-    this.uiVisible ? this.hideSidebars() : this.showSidebars()
+    this.sidebarsVisible ? this.hideSidebars() : this.showSidebars()
   }
   createSection() {
     if(this.selected.nodes.length < 1 && !this.activeNode) return
@@ -547,8 +612,17 @@ class DialogueEditor extends ProgramWindow {
 
     container.dataset.filename = filename
     container.append(title, filler, closeButton)
+
+    if(this.files.get(filename).header.isFileSaved === false)
+    this.createUnsavedIndicator(closeButton)
+
     Q("#navbar-files").append(container)
     this.setTabAsActive(container)
+  }
+  createUnsavedIndicator(/** @type HTMLElement */ placeBefore) {
+    let dot = El("div", "small-dot w6")
+    dot.style.marginRight = "5px"
+    placeBefore.before(dot)
   }
   setTabAsActive(/** @type HTMLDivElement */ tabElement) {
     Qa(".dialogue-node-file-tab").forEach(tab => tab.classList.remove("active"))
@@ -583,7 +657,6 @@ class DialogueEditor extends ProgramWindow {
 
   }
   setPerson(person, role, isVariable = false) {
-    console.log("setting person: ", person)
     if(this.activeNode.type == "text" || this.activeNode.type == "whisper" || this.activeNode.type == "pass" || this.activeNode.type == "aggression") {
       this.activeNode[role] = person
     }
@@ -594,10 +667,17 @@ class DialogueEditor extends ProgramWindow {
     }
     /* set HTML */
     this.highlighted.innerText = person
-    this.activeNode.setPersonThumbnail(this.highlighted, person, isVariable)
+    if(this.options.useThumbnails) 
+      this.activeNode.setPersonThumbnail(this.highlighted, person, isVariable)
 
     this.lastNpc = person
     this.npcSearchDelete()
+    this.markFileAsUnsaved()
+    this.reflowNodeStacks()
+  }
+  replaceCharacter(character, newCharacter) {
+    /* this happens when you click a character name in right sidebar panel */
+    throw "finish this"
   }
   setItem(item) {
     let itemIndex = +this.highlighted.dataset.itemindex
@@ -669,6 +749,7 @@ class DialogueEditor extends ProgramWindow {
     if(this.state.isnt("editing") && !forceExecution) return
 
     console.log("edit confirm")
+    this.markFileAsUnsaved()
 
     let 
     element = this.editedData.element
@@ -791,9 +872,6 @@ class DialogueEditor extends ProgramWindow {
     }
     if(event.code === "KeyD" && keys.shift) {
       this.deselectAll()
-    }
-    if(event.code === "KeyE") {
-      this.saveFile()
     }
     if(event.code === "KeyF") {
       this.propertiesPanel.toggle()
@@ -936,7 +1014,6 @@ class DialogueEditor extends ProgramWindow {
       this.createSection()
     }
     if(event.code === "KeyS" && keys.shift) {
-      this.storeDialogueData()
       this.saveFile()
     }
 
@@ -1345,6 +1422,9 @@ class DialogueEditor extends ProgramWindow {
     if(target.closest(".sidebar-folder-icon")) {
       this.openFolder()
     }
+    if(target.closest("#close-folder-button")) {
+      this.closeFolder()
+    }
 
     if(target.closest(".dialogue-editor-option")) {
       let optionElement = target.closest(".dialogue-editor-option")
@@ -1443,13 +1523,25 @@ class DialogueEditor extends ProgramWindow {
   }
   handleMiddleDown(event) {
     let target = event.target
-    if(target.closest(".properties-panel")) return
+    
+    if(target.closest(".properties-panel")) {
+      return
+    }
+    
+    if(target.closest(".dialogue-node-file-tab")) {
+      let tab = target.closest(".dialogue-node-file-tab")
+      tab.remove()
+    }
+
+    if(target.closest(".dialogue-editor")) {
+      this.state.set("panning")
+    }
+    
     this.contextMenuDelete()
-    this.state.set("panning")
   }
   handleRightDown(event) {
     let target = event.target
-
+    
     if(target === this.element)
       this.state.set("creatingContextMenu")
   }
@@ -1654,6 +1746,11 @@ class DialogueEditor extends ProgramWindow {
     }
 
     /* all buttons */
+    if(this.state.is("dragging")) {
+      this.reflowNodeStacks()
+      this.markFileAsUnsaved()
+    }
+
     if(this.state.is("dragging") && this.propertiesPanel.open) {
       this.propertiesPanel.show(event)
     }
@@ -1685,7 +1782,6 @@ class DialogueEditor extends ProgramWindow {
     this.connectionData.placeholderSocket.classList.add("hidden")
     this.propertiesPanel.toggleEditability()
     this.reconstructHTML()
-    this.reflowNodeStacks()
   }
   handleWheel(event) {
     if(event.target.closest(".properties-panel")) return
@@ -1731,6 +1827,7 @@ class DialogueEditor extends ProgramWindow {
     this.reconstructHTML()
   }
   setOptionTidyUp(forcedDirection = null, nodes = this.selected.nodes) {
+    this.markFileAsUnsaved()
     const spacing = 20
     const bounds = this.getStackBounds(nodes)
 
@@ -1957,8 +2054,17 @@ class DialogueEditor extends ProgramWindow {
     row.dataset.charactervariable = newName
     text.innerText = newName
   }
-  deleteCharacterVariable() {
-
+  deleteCharacterVariable(name) {
+    if(!this.characterVariables.has(name)) return
+    
+    this.characterVariables.delete(name)
+    Q(`.variable-character-row[data-charactervariable=''${name}]`).remove()
+  }
+  clearCharacterVariables() {
+    let keys = this.characterVariables.keys()
+    for(let key of keys)
+      this.deleteCharacterVariable(key)
+    this.characterVariables.clear()
   }
   contextMenuCreate() {
     if(this.contextMenu) 
@@ -2129,6 +2235,7 @@ class DialogueEditor extends ProgramWindow {
     this.connectionData.placeholderSocket.style.top =  mouse.clientPosition.y + "px"
   }
   createNode(type) {
+    this.markFileAsUnsaved()
     /* choose position and then reset the optional property */
     let position = this.nextNodePosition ?? mouse.clientPosition
     this.nextNodePosition = null
@@ -2257,7 +2364,7 @@ class DialogueEditor extends ProgramWindow {
 
     let bounds = new BoundingBox(0, 0, cw, ch)
 
-    if(this.uiVisible) {
+    if(this.sidebarsVisible) {
       inset = 40
       let leftSidebarRect =   Q("#sidebar-left").getBoundingClientRect()
       let rightSidebarRect =  Q("#sidebar-right").getBoundingClientRect()

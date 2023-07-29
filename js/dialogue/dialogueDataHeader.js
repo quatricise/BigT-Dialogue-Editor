@@ -1,16 +1,11 @@
 class DialogueDataHeader {
-  constructor(name, description, sections, stacks, characterVariables) {
-    /** @type String */ this.dialogueName = name                     ?? ""
-    /** @type String */ this.dialogueDescription = description       ?? ""
-    /** @type Set */    this.sections = sections                     ?? new Set()
-    /** @type Set */    this.stacks = stacks                         ?? new Set()
-    /** @type Map */    this.characterVariables = characterVariables ?? new Map()
-  }
-  static empty() {
-    let header = new DialogueDataHeader()
-    for(let key in header)
-      header[key] = null
-    return header
+  constructor(name, description, sections, stacks, characterVariables, isFileSaved) {
+    /** @type String */  this.dialogueName =        name               ?? ""
+    /** @type String */  this.dialogueDescription = description        ?? ""
+    /** @type Set */     this.sections =            sections           ?? new Set()
+    /** @type Set */     this.stacks =              stacks             ?? new Set()
+    /** @type Map */     this.characterVariables =  characterVariables ?? new Map()
+    /** @type Boolean */ this.isFileSaved =         isFileSaved        ?? true
   }
   static toObj(header) {
     let obj = {}
@@ -44,6 +39,10 @@ class DialogueDataHeader {
         case "characterVariables": {
           /* !!!!!not done, storing these is a nightmare */
           obj.characterVariables = header.characterVariables
+          break
+        }
+        case "isFileSaved": {
+          /* don't save this */
           break
         }
         default: {
@@ -82,6 +81,11 @@ class DialogueDataHeader {
         }
         case "characterVariables": {
           header.characterVariables = new Map()
+          break
+        }
+        case "isFileSaved": {
+          /* that's because when loading from a save file, the data obviously is saved */
+          header.isFileSaved = true
           break
         }
         default: {

@@ -28,7 +28,7 @@ class Server {
       contentType: "multipart/form-data",
       body: form
     })
-    return response.status
+    return true
   }
   static async deleteFile(folder, filename) {
     let 

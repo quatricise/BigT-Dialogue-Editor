@@ -1,11 +1,12 @@
 class HistoryMachine {
   constructor() {
-    this.states = []
+    this.states =       /** @type Array<HistoryState> */ []
+    this.currentState = /** @type HistoryState */ null
   }
-  forward() {
-
+  goForwards() {
+    this.currentState = this.states.after(this.currentState)
   }
-  backward() {
-
+  goBackwards() {
+    this.currentState = this.states.before(this.currentState)
   }
 }

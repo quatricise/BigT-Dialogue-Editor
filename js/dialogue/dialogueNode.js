@@ -449,6 +449,8 @@ class DialogueNode {
 
     /* remove this node from stacks if they contain it */
     this.stacks.forEach(s => s.deleteNodes(this))
+
+    dialogueEditor.markFileAsUnsaved()
   }
   static types = [
     "text",

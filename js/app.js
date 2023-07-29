@@ -71,13 +71,24 @@ function resetModifierKeys() {
 
 /* update the editor */
 function tick() {
-  /* set delta */
   let now = Date.now()
   dt = (now - lastTime) / 1000
   lastTime = now
 
   dialogueEditor.update()
   window.requestAnimationFrame(tick)
+}
+
+window.onbeforeunload = (event) => {
+  let canExit = true
+  dialogueEditor.files.forEach(f => {
+    if(f.header.isFileSaved === false) canExit = false
+  })
+  if(!canExit) {
+    event.preventDefault()
+    event.returnValue = "You have unsaved files, really exit?"
+    return event.returnValue
+  }
 }
 
 attachListeners()

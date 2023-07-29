@@ -41,7 +41,7 @@ app.post('/save-file', async (request, response) => {
   let filename = fields.filename
   let data = JSON.stringify(JSON.parse(fields.data))
   fs.writeFile(`dialogue/${folder}/${filename}.json`, data, () => {
-    response.writeHead(200, "OK")
+    response.writeHead(200, "OK").end()
   })
 })
 

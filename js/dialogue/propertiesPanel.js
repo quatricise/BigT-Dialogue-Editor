@@ -116,6 +116,8 @@ class PropertiesPanel {
 
     this.clearHTML()
     this.refreshHTML()
+
+    this.programWindow.markFileAsUnsaved()
   }
   refreshHTML() {
     this.programWindow.activeNode.criteria.forEach(criterion => {
