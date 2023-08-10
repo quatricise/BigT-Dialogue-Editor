@@ -1,3 +1,4 @@
+/* string */
 String.prototype.capitalize = function() {
   return this.charAt(0).toLocaleUpperCase() + this.slice(1)
 }
@@ -31,6 +32,7 @@ String.prototype.camelCaseToArray = function() {
   return this.splitCamelCase().toLocaleLowerCase()
 }
 
+/* array */
 Array.prototype.remove = function(...children) {
   children.forEach(child => {
     if(this.find(c => c === child) === undefined)
@@ -63,4 +65,18 @@ Array.prototype.empty = function() {
 Array.prototype.clear = function() {
   while(this.length)
     this.pop()
+}
+
+/* set */
+Set.prototype.find = function(/** @type Function */ filterFunction) {
+  for(let item of this) {
+    if(filterFunction(item)) return item
+  }
+}
+Set.prototype.filter = function(/** @type Function */ filterFunction) {
+  let items = []
+  for(let item of this) {
+    if(filterFunction(item)) items.push(item)
+  }
+  return items
 }

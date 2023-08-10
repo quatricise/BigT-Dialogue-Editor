@@ -10,7 +10,10 @@ class DialogueEditor extends ProgramWindow {
     this.activeNode = null
     this.editedData = {}
     this.history = new HistoryMachine()
-    this.style = {connectionWidth: 12}
+    this.style = {
+      connectionWidth: 12,
+      socketRadius: 7 
+    }
 
     /* would be used for zooming, so far zoom is achieved by the default page zoom */
     this.scale = 1
@@ -1557,6 +1560,16 @@ class DialogueEditor extends ProgramWindow {
       /* drag everything */
       nodes.forEach(node => node.drag(event))
 
+      /* if active node is part of a stack, drag the whole stack too */
+      let stacks = this.stacks.filter(s => s.nodes.find(n => n === this.activeNode))
+      stacks.forEach(s => {
+        /* filter nodes which are not already active or selected */
+        let stackNodes = s.nodes.filter(n => {
+          return n !== this.activeNode && !this.selected.nodes.findChild(n)
+        })
+        stackNodes.forEach(n => n.drag())
+      })
+
       /* highlight sections if the nodes are dragged into them */
       if(keys.shift) {
         this.sections.forEach(section => {
@@ -1900,7 +1913,7 @@ class DialogueEditor extends ProgramWindow {
     /* add nodes to a stack */
     this.createStack(...nodes)
 
-    this.updateHTML()
+    this.reconstructHTML()
   }
   setOptionStackHorizontally() {
     this.setOptionTidyUp("horizontal")    
@@ -1943,6 +1956,7 @@ class DialogueEditor extends ProgramWindow {
     stack.destroy()
     this.stacks.delete(stack)
     console.log("delete stack")
+    this.reconstructHTML()
   }
   getStackBounds(/** @type Array<DialogueNode> */ nodes) {
     let top =     Math.min(...nodes.map(node => node.pos.y))
@@ -1962,8 +1976,16 @@ class DialogueEditor extends ProgramWindow {
     let stacks = Array.from(this.activeNode.stacks)
     stacks.forEach(stack => {
       let nodes = Array.from(stack.nodes)
+
+      /* if there is an active node in the stack, align the stack with the active node */
+      if(nodes.findChild(this.activeNode)) {
+        let axis = stack.type === "horizontal" ? "y" : "x"
+        nodes.forEach(n => n.pos[axis] = this.activeNode.pos[axis])
+      }
+      
       this.setOptionTidyUp(null, nodes)
     })
+    console.log("reflow")
   }
   createCharacterVariable() {
     let variableName = "variable_" + this.characterVariables.size
@@ -2459,11 +2481,22 @@ class DialogueEditor extends ProgramWindow {
       node.out.length === 0 ? node.element.classList.add("end-node")    : node.element.classList.remove("end-node")
       node.in.length === 0  ? node.element.classList.add("start-node")  : node.element.classList.remove("start-node")
 
-      /* this is used to offset the paths so it looks like they come from the socket; it's set by CSS so fuck it, just hardcode it here for now, it's fiddly anyways */
+      /* this is used to offset the paths so it looks like they come from the socket; it's set by CSS so fuck it, just hardcode it here for now, the worst it can produce is visual bugs */
       let socketRadius = 7
 
       node.update()
+
       node.out.forEach(conn => {
+        /* determine the connection color */
+        let color = "#393c3f"
+        let outNode = conn.to
+
+        let stacks = this.stacks.filter(s => s.nodes.find(n => n === node))
+        stacks.forEach(stack => {
+          if(stack.nodes.find(n => n === outNode))
+            color = "#376cff"
+        })
+
         let svg = SVGEl(
           "svg", 
           "dialogue-node-connection", 
@@ -2480,7 +2513,7 @@ class DialogueEditor extends ProgramWindow {
           "node-connection", 
           [
             ["d", "M 0 0 L 250 250"],
-            ["stroke", "#393c3f"], 
+            ["stroke", color], 
             ["stroke-width", this.style.connectionWidth],
           ]
         )
@@ -2491,8 +2524,8 @@ class DialogueEditor extends ProgramWindow {
           conn.to.element.querySelector(".dialogue-node-socket.in").getBoundingClientRect()
         ]
         path.setAttribute("d", 
-          "M " + (rects[0].x + socketRadius) + " " + (rects[0].y + socketRadius) + 
-          "L " + (rects[1].x + socketRadius) + " " + (rects[1].y + socketRadius)
+          "M " + (rects[0].x + this.style.socketRadius) + " " + (rects[0].y + this.style.socketRadius) + 
+          "L " + (rects[1].x + this.style.socketRadius) + " " + (rects[1].y + this.style.socketRadius)
         )
         svg.append(title, path)
         svg.dataset.id = node.id
@@ -2527,8 +2560,8 @@ class DialogueEditor extends ProgramWindow {
       node.out.forEach((conn, index) => {
         let layoutBlock = layoutData[node.id][index]
         layoutData[node.id][index].path.setAttribute("d",
-          "M " + (layoutBlock.rects[0].x + 6) + " " + (layoutBlock.rects[0].y + 6) + 
-          "L " + (layoutBlock.rects[1].x + 6) + " " + (layoutBlock.rects[1].y + 6)
+          "M " + (layoutBlock.rects[0].x + this.style.socketRadius) + " " + (layoutBlock.rects[0].y + this.style.socketRadius) + 
+          "L " + (layoutBlock.rects[1].x + this.style.socketRadius) + " " + (layoutBlock.rects[1].y + this.style.socketRadius)
         )
       })
     })
