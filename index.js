@@ -1,16 +1,16 @@
 const fs = require("fs")
 const cors = require("cors")
 const express = require('express')
+const {formidable} = require("formidable")
 const app = express()
 const port = 3000
-const {formidable} = require("formidable")
 
 app.use(cors({origin: "*"}))
 
 app.post('/get-dialogue-data', async (request, response) => {
   let [fields, files] = await parseForm(request)
   let folder = fields.folder
-
+  console.log(folder)
   let characters, fileList = []
   if(fs.existsSync("dialogue/" + folder) === false) {
     createDialogueDir(folder)

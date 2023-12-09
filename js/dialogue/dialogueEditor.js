@@ -4,7 +4,7 @@ class DialogueEditor extends ProgramWindow {
     this.dialogueName = null
     this.dialogueDescription = "Dialogue description"
     this.sections = new Set()
-    this.stacks = /** @type Set<DialogueNodeStack> */ new Set()
+    this.stacks = new Set()
     this.nodes = []
     this.folder = null
     this.activeNode = null
@@ -1458,8 +1458,15 @@ class DialogueEditor extends ProgramWindow {
         alert('not boolean')
     }
 
-    if(target.closest(".dialogue-node-widget.list")) {
-      this.propertiesPanel.toggle()
+    /* toggle the propertiesPanel */
+    {
+      if(target.closest(".dialogue-node-widget.list")) {
+        this.propertiesPanel.toggle()
+      }
+      else
+      if(target.closest(".condition-count")) {
+        this.propertiesPanel.toggle()
+      }
     }
 
     if(target.closest(".dialogue-node-widget.precondition")) {
