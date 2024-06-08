@@ -166,6 +166,7 @@
   pointer-events: none;
   z-index: 100;
 }
+
 .dialogue-node.precondition::after {
   content: "Precondition";
   position: absolute;
@@ -185,6 +186,7 @@
 .dialogue-node.start-node:not(.active, .selected, .end-node, .precondition) {
   outline: 2px solid rgb(98, 7, 126);
 }
+
 .dialogue-node.start-node:not(.active, .selected, .end-node, .highlighted, .precondition)::before {
   content: "Entry";
   position: absolute;
@@ -199,9 +201,11 @@
   color: rgb(175, 33, 218);
   pointer-events: none;
 }
+
 .dialogue-node.end-node:not(.active, .selected) {
   outline: 2px solid green;
 }
+
 .dialogue-node.end-node:not(.active, .selected, .start-node, .highlighted, .precondition)::before {
   content: "Exit";
   position: absolute;
@@ -216,9 +220,11 @@
   color: green;
   pointer-events: none;
 }
+
 .dialogue-node.end-node.start-node:not(.active, .selected, .precondition) {
   outline: 2px solid rgb(160, 29, 19);
 }
+
 .dialogue-node.end-node.start-node:not(.active, .selected, .precondition)::before {
   content: "NOT USED";
   position: absolute;
@@ -237,6 +243,7 @@
 .dialogue-node.highlighted:not(.selected) {
   outline: 2px dashed var(--color-shield) !important;
 }
+
 .dialogue-node.highlighted.input-node:not(.selected) {
   outline: 2px dashed rgb(175, 33, 218) !important;
 }
@@ -264,6 +271,7 @@
   display: flex;
   align-items: center;
 }
+
 .dialogue-node-row:hover {
   border: 2px solid var(--dark-4);
 }

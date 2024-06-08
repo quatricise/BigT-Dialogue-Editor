@@ -61,6 +61,7 @@ class DialogueEditor extends ProgramWindow {
     }
     this.options = {
       compactView: false,
+      displayNodeWarnings: false, //todo
       safeMode: false,
       displayStacks: false,
       autoUpdateStacks: false,
@@ -1947,6 +1948,10 @@ class DialogueEditor extends ProgramWindow {
   }
   setOptionUseThumbnails() {
     this.options.useThumbnails = !this.options.useThumbnails
+  }
+  setOptionDisplayNodeWarnings() {
+    alert("f")
+    //todo
   }
   //#endregion
   createStack(...inputNodes) {
